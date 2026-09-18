@@ -30,6 +30,7 @@ const client = new Client({
 });
 
 const ROLE_ID = "1506592536372842517";
+const GUILD_ID = "1505911450634289253";
 
 client.once("ready", async () => {
   console.log(`Bot login sebagai ${client.user.tag}`);
@@ -43,7 +44,7 @@ client.once("ready", async () => {
 
   try {
     await rest.put(
-      Routes.applicationCommands(client.user.id),
+      Routes.applicationCommands(client.user.id,GUILD_ID),
       { body: [command.toJSON()] }
     );
 
