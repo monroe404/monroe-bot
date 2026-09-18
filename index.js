@@ -64,7 +64,7 @@ client.on("interactionCreate", async (interaction) => {
         .setTitle("👤 Human Role")
         .setDescription(
           "**Klik tombol di bawah untuk mengambil role Human.**\n\n" +
-          "Gunakan tombol tersebut untuk mengatur role kamu."
+          " ! : Jika bot tidak bisa di gunakan bisa chat di https://discord.com/channels/1502204899155247104/1545112151297892423"
         );
 
       const button = new ButtonBuilder()
