@@ -72,12 +72,12 @@ client.on("interactionCreate", async (interaction) => {
         .setTitle("👤 Human Role")
         .setDescription(
           "**Klik tombol di bawah untuk mengambil role Human.**\n\n" +
-          "Gunakan tombol tersebut untuk mengatur role kamu."
+          "Dapatkan Role Human untuk mengakses semua file secara gratis."
         );
 
       const button = new ButtonBuilder()
         .setCustomId("human_role")
-        .setLabel("Human")
+        .setLabel("Pencet Ini")
         .setEmoji("👤")
         .setStyle(ButtonStyle.Primary);
 
@@ -135,72 +135,6 @@ client.on("interactionCreate", async (interaction) => {
           ephemeral: true
         });
       }
-    }
-  }
-});
-
-client.on("messageCreate", async (message) => {
-
-  if (message.author.bot) return;
-
-  const youtubeRegex =
-    /https?:\/\/(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/)[^\s]+/i;
-
-  const match = message.content.match(youtubeRegex);
-
-  if (!match) return;
-
-  const youtubeLink = match[0];
-
-  const folder = path.join(__dirname, "downloads");
-
-  if (!fs.existsSync(folder)) {
-    fs.mkdirSync(folder);
-  }
-
-  const fileName = "audio_" + Date.now();
-  const outputPath = path.join(folder, fileName + ".mp3");
-
-  const processing = await message.reply(
-    "🎵 **Memproses audio...**\n\n" +
-    "⏳ Tunggu sebentar."
-  );
-
-  try {
-
-    await youtubedl(youtubeLink, {
-      extractAudio: true,
-      audioFormat: "mp3",
-      audioQuality: "128K",
-      output: outputPath,
-      noPlaylist: true
-    });
-
-    if (!fs.existsSync(outputPath)) {
-      throw new Error("File MP3 tidak ditemukan.");
-    }
-
-    await processing.edit(
-      "✅ **Audio berhasil diproses!**"
-    );
-
-    await message.reply({
-      files: [outputPath]
-    });
-
-    fs.unlinkSync(outputPath);
-
-  } catch (error) {
-
-    console.error("Converter error:", error);
-
-    await processing.edit(
-      "❌ **Gagal memproses audio.**\n" +
-      "Cek Railway Logs untuk detail error."
-    );
-
-    if (fs.existsSync(outputPath)) {
-      fs.unlinkSync(outputPath);
     }
   }
 });
