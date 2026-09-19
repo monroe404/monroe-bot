@@ -64,7 +64,7 @@ client.on("interactionCreate", async (interaction) => {
         .setTitle("👤 Human Role")
         .setDescription(
           "**Klik tombol di bawah untuk mengambil role Human.**\n\n" +
-          " ! : Jika bot tidak bisa di gunakan bisa chat di https://discord.com/channels/1502204899155247104/1545112151297892423"
+          " ! : Jika bot tidak bisa di gunakan bisa chat di https://discord.com/channels/1502204899155247104/1545112151297892423."
         );
 
       const button = new ButtonBuilder()
@@ -125,4 +125,24 @@ client.on("interactionCreate", async (interaction) => {
   }
 });
 
-client.login(process.env.DISCORD_TOKEN);
+/* =========================
+   YOUTUBE DETECTOR
+========================= */
+
+client.on("messageCreate", async (message) => {
+  if (message.author.bot) return;
+
+  const youtubeRegex =
+    /https?:\/\/(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/)[^\s]+/i;
+
+  const youtubeLink = message.content.match(youtubeRegex);
+
+  if (!youtubeLink) return;
+
+  await message.reply(
+    "🎵 **Link YouTube terdeteksi!**\n\n" +
+    "🔄 Converter sedang dipersiapkan..."
+  );
+});  
+
+client.login(process.env.DISCORD_TOKEN);;
