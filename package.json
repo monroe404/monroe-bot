@@ -1,7 +1,7 @@
 {
-  "name": "azes-boombox-bot",
+  "name": "Monroe Bot Boombox",
   "version": "1.0.0",
-  "description": "Bot khusus untuk generate audio dari URL (YouTube, TikTok, Spotify)",
+  "description": "Monroe Comunity Discord Bot",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
