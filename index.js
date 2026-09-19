@@ -1,6 +1,4 @@
 const express = require("express");
-const fs = require("fs");
-const path = require("path");
 const {
   Client,
   GatewayIntentBits,
@@ -13,7 +11,9 @@ const {
   EmbedBuilder
 } = require("discord.js");
 
-const youtubedl = require("youtube-dl-exec");
+// =========================
+// WEB SERVER
+// =========================
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -26,6 +26,10 @@ app.listen(PORT, () => {
   console.log("Web server berjalan di port " + PORT);
 });
 
+// =========================
+// DISCORD CLIENT
+// =========================
+
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -37,6 +41,10 @@ const client = new Client({
 
 const ROLE_ID = "1506592536372842517";
 const GUILD_ID = "1505911450634289253";
+
+// =========================
+// BOT READY
+// =========================
 
 client.once("ready", async () => {
   console.log("Bot login sebagai " + client.user.tag);
@@ -62,7 +70,15 @@ client.once("ready", async () => {
   }
 });
 
+// =========================
+// INTERACTION
+// =========================
+
 client.on("interactionCreate", async (interaction) => {
+
+  // =========================
+  // /setup-role
+  // =========================
 
   if (interaction.isChatInputCommand()) {
 
@@ -72,12 +88,12 @@ client.on("interactionCreate", async (interaction) => {
         .setTitle("👤 Human Role")
         .setDescription(
           "**Klik tombol di bawah untuk mengambil role Human.**\n\n" +
-          "Dapatkan Role Human untuk mengakses semua file secara gratis."
+          "Ambil Role Human untuk mengakses lebih dalam file secara gratis."
         );
 
       const button = new ButtonBuilder()
         .setCustomId("human_role")
-        .setLabel("Pencet Ini")
+        .setLabel("Pencet ini")
         .setEmoji("👤")
         .setStyle(ButtonStyle.Primary);
 
@@ -90,6 +106,10 @@ client.on("interactionCreate", async (interaction) => {
       });
     }
   }
+
+  // =========================
+  // HUMAN ROLE BUTTON
+  // =========================
 
   if (interaction.isButton()) {
 
@@ -138,5 +158,36 @@ client.on("interactionCreate", async (interaction) => {
     }
   }
 });
+
+// =========================
+// YOUTUBE DETECTOR SAJA
+// =========================
+
+client.on("messageCreate", async (message) => {
+
+  if (message.author.bot) return;
+
+  console.log("Pesan masuk: " + message.content);
+
+  const youtubeRegex =
+    /https?:\/\/(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/)[^\s]+/i;
+
+  const match = message.content.match(youtubeRegex);
+
+  if (!match) return;
+
+  const youtubeLink = match[0];
+
+  console.log("YouTube terdeteksi: " + youtubeLink);
+
+  await message.reply(
+    "🎵 **Link YouTube terdeteksi!**\n\n" +
+    "🔄 Converter sedang dipersiapkan..."
+  );
+});
+
+// =========================
+// LOGIN
+// =========================
 
 client.login(process.env.DISCORD_TOKEN);
