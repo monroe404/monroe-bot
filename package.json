@@ -7,8 +7,10 @@
     "start": "node index.js"
   },
   "dependencies": {
+  "@distube/yt-dlp": "^2.0.1",
+  "axios": "^1.12.2",
   "discord.js": "^14.21.0",
   "express": "^5.1.0",
-  "@distube/yt-dlp": "^2.0.1"
+  "form-data": "^4.0.4"
   }
 }
