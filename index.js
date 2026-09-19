@@ -11,10 +11,6 @@ const {
   EmbedBuilder
 } = require("discord.js");
 
-// =========================
-// WEB SERVER
-// =========================
-
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -25,10 +21,6 @@ app.get("/", (req, res) => {
 app.listen(PORT, () => {
   console.log("Web server berjalan di port " + PORT);
 });
-
-// =========================
-// DISCORD CLIENT
-// =========================
 
 const client = new Client({
   intents: [
@@ -41,10 +33,6 @@ const client = new Client({
 
 const ROLE_ID = "1506592536372842517";
 const GUILD_ID = "1505911450634289253";
-
-// =========================
-// BOT READY
-// =========================
 
 client.once("ready", async () => {
   console.log("Bot login sebagai " + client.user.tag);
@@ -70,15 +58,7 @@ client.once("ready", async () => {
   }
 });
 
-// =========================
-// INTERACTION
-// =========================
-
 client.on("interactionCreate", async (interaction) => {
-
-  // =========================
-  // /setup-role
-  // =========================
 
   if (interaction.isChatInputCommand()) {
 
@@ -88,12 +68,12 @@ client.on("interactionCreate", async (interaction) => {
         .setTitle("👤 Human Role")
         .setDescription(
           "**Klik tombol di bawah untuk mengambil role Human.**\n\n" +
-          "Ambil Role Human untuk mengakses lebih dalam file secara gratis."
+          "Gunakan tombol tersebut untuk mengatur role kamu."
         );
 
       const button = new ButtonBuilder()
         .setCustomId("human_role")
-        .setLabel("Pencet ini")
+        .setLabel("Human")
         .setEmoji("👤")
         .setStyle(ButtonStyle.Primary);
 
@@ -106,10 +86,6 @@ client.on("interactionCreate", async (interaction) => {
       });
     }
   }
-
-  // =========================
-  // HUMAN ROLE BUTTON
-  // =========================
 
   if (interaction.isButton()) {
 
@@ -159,18 +135,21 @@ client.on("interactionCreate", async (interaction) => {
   }
 });
 
-if (message.content.toLowerCase().includes("rasya")) {
-  await message.reply("iya tau Rasya emang ganteng");
-  return;
-}
+client.on("messageCreate", async (message) => {
 
-if (message.content.toLowerCase().includes("makasi")) {
-  await message.reply("sama sama");
-  return;
-}
+  if (message.author.bot) return;
 
-// =========================
-// LOGIN
-// =========================
+  const text = message.content.toLowerCase();
+
+  if (text.includes("makasi") || text.includes("makasih")) {
+    await message.reply("sama sama");
+    return;
+  }
+
+  if (text.includes("rasya")) {
+    await message.reply("iya tau Rasya emang ganteng");
+    return;
+  }
+});
 
 client.login(process.env.DISCORD_TOKEN);
