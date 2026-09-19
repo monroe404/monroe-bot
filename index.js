@@ -1,4 +1,6 @@
 const express = require("express");
+const fs = require("fs");
+const path = require("path");
 const {
   Client,
   GatewayIntentBits,
@@ -10,6 +12,8 @@ const {
   ButtonStyle,
   EmbedBuilder
 } = require("discord.js");
+
+const youtubedl = require("youtube-dl-exec");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -139,8 +143,6 @@ client.on("messageCreate", async (message) => {
 
   if (message.author.bot) return;
 
-  console.log("Pesan masuk: " + message.content);
-
   const youtubeRegex =
     /https?:\/\/(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/)[^\s]+/i;
 
@@ -150,12 +152,57 @@ client.on("messageCreate", async (message) => {
 
   const youtubeLink = match[0];
 
-  console.log("YouTube terdeteksi: " + youtubeLink);
+  const folder = path.join(__dirname, "downloads");
 
-  await message.reply(
-    "🎵 **Link YouTube terdeteksi!**\n\n" +
-    "🔄 Converter sedang dipersiapkan..."
+  if (!fs.existsSync(folder)) {
+    fs.mkdirSync(folder);
+  }
+
+  const fileName = "audio_" + Date.now();
+  const outputPath = path.join(folder, fileName + ".mp3");
+
+  const processing = await message.reply(
+    "🎵 **Memproses audio...**\n\n" +
+    "⏳ Tunggu sebentar."
   );
+
+  try {
+
+    await youtubedl(youtubeLink, {
+      extractAudio: true,
+      audioFormat: "mp3",
+      audioQuality: "128K",
+      output: outputPath,
+      noPlaylist: true
+    });
+
+    if (!fs.existsSync(outputPath)) {
+      throw new Error("File MP3 tidak ditemukan.");
+    }
+
+    await processing.edit(
+      "✅ **Audio berhasil diproses!**"
+    );
+
+    await message.reply({
+      files: [outputPath]
+    });
+
+    fs.unlinkSync(outputPath);
+
+  } catch (error) {
+
+    console.error("Converter error:", error);
+
+    await processing.edit(
+      "❌ **Gagal memproses audio.**\n" +
+      "Cek Railway Logs untuk detail error."
+    );
+
+    if (fs.existsSync(outputPath)) {
+      fs.unlinkSync(outputPath);
+    }
+  }
 });
 
 client.login(process.env.DISCORD_TOKEN);
