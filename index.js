@@ -19,13 +19,15 @@ app.get("/", (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Web server berjalan di port ${PORT}`);
+  console.log("Web server berjalan di port " + PORT);
 });
 
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMembers
+    GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent
   ]
 });
 
@@ -33,7 +35,7 @@ const ROLE_ID = "1506592536372842517";
 const GUILD_ID = "1505911450634289253";
 
 client.once("ready", async () => {
-  console.log(`Bot login sebagai ${client.user.tag}`);
+  console.log("Bot login sebagai " + client.user.tag);
 
   const command = new SlashCommandBuilder()
     .setName("setup-role")
@@ -44,8 +46,10 @@ client.once("ready", async () => {
 
   try {
     await rest.put(
-      Routes.applicationCommands(client.user.id,GUILD_ID),
-      { body: [command.toJSON()] }
+      Routes.applicationGuildCommands(client.user.id, GUILD_ID),
+      {
+        body: [command.toJSON()]
+      }
     );
 
     console.log("Slash command berhasil didaftarkan.");
@@ -56,15 +60,15 @@ client.once("ready", async () => {
 
 client.on("interactionCreate", async (interaction) => {
 
-  // COMMAND /setup-role
   if (interaction.isChatInputCommand()) {
+
     if (interaction.commandName === "setup-role") {
 
       const embed = new EmbedBuilder()
         .setTitle("👤 Human Role")
         .setDescription(
           "**Klik tombol di bawah untuk mengambil role Human.**\n\n" +
-          " ! : Jika bot tidak bisa di gunakan bisa chat di https://discord.com/channels/1502204899155247104/1545112151297892423."
+          "Gunakan tombol tersebut untuk mengatur role kamu."
         );
 
       const button = new ButtonBuilder()
@@ -83,8 +87,8 @@ client.on("interactionCreate", async (interaction) => {
     }
   }
 
-  // BUTTON HUMAN
   if (interaction.isButton()) {
+
     if (interaction.customId === "human_role") {
 
       const member = interaction.member;
@@ -98,26 +102,32 @@ client.on("interactionCreate", async (interaction) => {
       }
 
       try {
+
         if (member.roles.cache.has(ROLE_ID)) {
+
           await member.roles.remove(role);
 
           await interaction.reply({
-            content: "❌ Role **Human** telah dilepas.",
+            content: "❌ Role Human telah dilepas.",
             ephemeral: true
           });
+
         } else {
+
           await member.roles.add(role);
 
           await interaction.reply({
-            content: "✅ Kamu berhasil mendapatkan role **Human**!",
+            content: "✅ Kamu berhasil mendapatkan role Human!",
             ephemeral: true
           });
         }
+
       } catch (error) {
+
         console.error(error);
 
         await interaction.reply({
-          content: "❌ Bot tidak bisa mengatur role. Cek permission dan posisi role bot.",
+          content: "❌ Bot tidak bisa mengatur role.",
           ephemeral: true
         });
       }
@@ -125,24 +135,27 @@ client.on("interactionCreate", async (interaction) => {
   }
 });
 
-/* =========================
-   YOUTUBE DETECTOR
-========================= */
-
 client.on("messageCreate", async (message) => {
+
   if (message.author.bot) return;
 
+  console.log("Pesan masuk: " + message.content);
+
   const youtubeRegex =
-    /https?:\/\/(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/)[^\s]+/i;
+    /https?:\/\/(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/)[^\s]+/i;
 
-  const youtubeLink = message.content.match(youtubeRegex);
+  const match = message.content.match(youtubeRegex);
 
-  if (!youtubeLink) return;
+  if (!match) return;
+
+  const youtubeLink = match[0];
+
+  console.log("YouTube terdeteksi: " + youtubeLink);
 
   await message.reply(
     "🎵 **Link YouTube terdeteksi!**\n\n" +
     "🔄 Converter sedang dipersiapkan..."
   );
-});  
+});
 
-client.login(process.env.DISCORD_TOKEN);;
+client.login(process.env.DISCORD_TOKEN);
