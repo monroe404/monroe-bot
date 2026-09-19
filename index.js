@@ -159,6 +159,16 @@ client.on("interactionCreate", async (interaction) => {
   }
 });
 
+if (message.content.toLowerCase().includes("rasya")) {
+  await message.reply("iya tau Rasya emang ganteng");
+  return;
+}
+
+if (message.content.toLowerCase().includes("makasi")) {
+  await message.reply("sama sama");
+  return;
+}
+
 // =========================
 // LOGIN
 // =========================
