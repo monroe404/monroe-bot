@@ -45,7 +45,7 @@ const client = new Client({
 // CONFIG
 // =========================
 
-const GUILD_ID = "1505911450634289253";
+const GUILD_ID = "1502204899155247104";
 
 const ROLE_ID = "1506592536372842517";
 
