@@ -27,6 +27,10 @@ const {
   handleAutoResponse
 } = require("./features/autoResponse");
 
+const {
+  handleAI
+} = require("./features/ai");
+
 // =========================
 // WEB SERVER
 // =========================
@@ -119,12 +123,9 @@ client.on("messageCreate", async message => {
   if (message.author.bot) return;
 
   try {
-    // Auto response
     await handleAutoResponse(message);
-
-    // Moderator commands
     await handleModeration(message);
-
+    await handleAi(message);
   } catch (error) {
     console.error(
       "❌ Message Error:",
