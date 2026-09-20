@@ -3,7 +3,6 @@ const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 async function handleAI(message) {
   if (message.author.bot) return;
 
-  // Hanya aktif kalau bot di-mention
   if (!message.mentions.has(message.client.user)) {
     return;
   }
@@ -35,6 +34,48 @@ async function handleAI(message) {
                 {
                   text: prompt
                 }
+              ]
+            }
+          ]
+        })
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error("Gemini Error:", data);
+
+      return message.reply(
+        "❌ AI sedang mengalami masalah."
+      );
+    }
+
+    const answer =
+      data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+    if (!answer) {
+      return message.reply(
+        "❌ AI tidak memberikan jawaban."
+      );
+    }
+
+    return message.reply(
+      answer.slice(0, 2000)
+    );
+
+  } catch (error) {
+    console.error("❌ Gemini Error:", error);
+
+    return message.reply(
+      "❌ Gagal menghubungi AI."
+    );
+  }
+}
+
+module.exports = {
+  handleAI
+};                }
               ]
             }
           ]
