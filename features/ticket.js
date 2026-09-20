@@ -3,7 +3,8 @@ const {
   ButtonBuilder,
   ButtonStyle,
   ChannelType,
-  EmbedBuilder,
+  ContainerBuilder,
+  MessageFlags,
   PermissionFlagsBits
 } = require("discord.js");
 
@@ -14,12 +15,20 @@ const {
   TICKET_PANEL_CHANNEL_ID
 } = require("../config");
 
+// =========================
+// STAFF CHECK
+// =========================
+
 function isStaff(member) {
   return (
     member.roles.cache.has(STAFF_ROLE_ID) ||
     member.roles.cache.has(FOUNDER_ROLE_ID)
   );
 }
+
+// =========================
+// TICKET PANEL
+// =========================
 
 async function sendTicketPanel(client) {
   try {
@@ -36,84 +45,136 @@ async function sendTicketPanel(client) {
     const alreadyExists = messages.some(
       message =>
         message.author.id === client.user.id &&
-        message.embeds[0]?.title ===
-          "🟧 MONROE COMMUNITY STORE"
+        message.flags.has(MessageFlags.IsComponentsV2)
     );
 
     if (alreadyExists) return;
 
-    const embed = new EmbedBuilder()
-      .setColor(0xff8c00)
-      .setTitle("🟧 MONROE COMMUNITY STORE")
-      .setDescription(
-        "🛒 **ORDER / PURCHASE**\n\n" +
-        "Butuh membeli produk atau jasa?\n" +
-        "Klik tombol di bawah untuk membuat ticket order.\n\n" +
-        "📦 **PRODUCT**\n" +
-        "💳 **PAYMENT**\n" +
-        "🧾 **ORDER INFORMATION**\n" +
-        "🛡️ **CUSTOMER SUPPORT**\n\n" +
-        "━━━━━━━━━━━━━━━━━━━━\n\n" +
-        "⚡ **Fast Response**\n" +
-        "🔒 **Private Ticket**\n" +
-        "💬 **Friendly Support**\n\n" +
-        "MONROE COMMUNITY © 2026"
+    // =========================
+    // BUTTONS
+    // =========================
+
+    const orderButton = new ButtonBuilder()
+      .setCustomId("ticket_buy")
+      .setLabel("ORDER")
+      .setEmoji("🛒")
+      .setStyle(ButtonStyle.Primary);
+
+    const staffButton = new ButtonBuilder()
+      .setCustomId("ticket_staff")
+      .setLabel("CONTACT STAFF")
+      .setEmoji("💬")
+      .setStyle(ButtonStyle.Secondary);
+
+    const warrantyButton = new ButtonBuilder()
+      .setCustomId("ticket_warranty")
+      .setLabel("WARRANTY")
+      .setEmoji("🛡️")
+      .setStyle(ButtonStyle.Secondary);
+
+    const buttonRow = new ActionRowBuilder()
+      .addComponents(
+        orderButton,
+        staffButton,
+        warrantyButton
       );
 
-    const row = new ActionRowBuilder().addComponents(
-      new ButtonBuilder()
-        .setCustomId("ticket_buy")
-        .setLabel("BUY / ORDER")
-        .setEmoji("🛒")
-        .setStyle(ButtonStyle.Primary),
+    // =========================
+    // MAIN CONTAINER
+    // =========================
 
-      new ButtonBuilder()
-        .setCustomId("ticket_staff")
-        .setLabel("CONTACT STAFF")
-        .setEmoji("📞")
-        .setStyle(ButtonStyle.Secondary),
+    const container = new ContainerBuilder()
+      .setAccentColor(0xff8c00)
 
-      new ButtonBuilder()
-        .setCustomId("ticket_help")
-        .setLabel("HELP")
-        .setEmoji("❓")
-        .setStyle(ButtonStyle.Secondary)
-    );
+      .addTextDisplayComponents(
+        text =>
+          text.setContent(
+            "# 🟧 MONROE COMMUNITY\n" +
+            "## SUPPORT CENTER\n\n" +
+
+            "Butuh bantuan atau ingin melakukan pemesanan?\n" +
+            "Pilih kategori yang sesuai dengan kebutuhan kamu.\n\n" +
+
+            "**🛒 ORDER**\n" +
+            "Pembelian produk, jasa, atau layanan Monroe.\n\n" +
+
+            "**💬 CONTACT STAFF**\n" +
+            "Hubungi staff untuk pertanyaan atau bantuan.\n\n" +
+
+            "**🛡️ WARRANTY**\n" +
+            "Gunakan untuk kendala atau pengajuan garansi."
+          )
+      )
+
+      .addSeparatorComponents(
+        separator => separator
+      )
+
+      .addTextDisplayComponents(
+        text =>
+          text.setContent(
+            "📌 Pilih kategori di bawah untuk membuat ticket.\n" +
+            "🔒 Setiap ticket bersifat private.\n\n" +
+            "-# MONROE COMMUNITY © 2026"
+          )
+      )
+
+      .addActionRowComponents(buttonRow);
 
     await channel.send({
-      embeds: [embed],
-      components: [row]
+      components: [container],
+      flags: MessageFlags.IsComponentsV2
     });
 
-    console.log("✅ Panel Ticket berhasil dikirim.");
+    console.log(
+      "✅ Panel Ticket Components V2 berhasil dikirim."
+    );
+
   } catch (error) {
-    console.error("❌ Gagal mengirim Ticket Panel:", error);
+    console.error(
+      "❌ Gagal mengirim Ticket Panel:",
+      error
+    );
   }
 }
+
+// =========================
+// HANDLE TICKET
+// =========================
 
 async function handleTicketFeature(interaction) {
   if (!interaction.isButton()) return;
 
   // =========================
-  // BUY / ORDER
+  // ORDER
   // =========================
 
   if (interaction.customId === "ticket_buy") {
     try {
       const guild = interaction.guild;
 
+      // =========================
+      // CHECK EXISTING TICKET
+      // =========================
+
       const existingTicket = guild.channels.cache.find(
         channel =>
           channel.type === ChannelType.GuildText &&
-          channel.topic === `ticket-owner:${interaction.user.id}`
+          channel.topic ===
+            `ticket-owner:${interaction.user.id}`
       );
 
       if (existingTicket) {
         return interaction.reply({
-          content: `❌ Kamu sudah mempunyai ticket: ${existingTicket}`,
+          content:
+            `❌ Kamu sudah mempunyai ticket: ${existingTicket}`,
           ephemeral: true
         });
       }
+
+      // =========================
+      // CATEGORY
+      // =========================
 
       let category = guild.channels.cache.find(
         channel =>
@@ -127,108 +188,161 @@ async function handleTicketFeature(interaction) {
           type: ChannelType.GuildCategory
         });
 
-        // Letakkan category di bagian atas
         await category.setPosition(0);
       }
+
+      // =========================
+      // USERNAME
+      // =========================
 
       const username = interaction.user.username
         .toLowerCase()
         .replace(/[^a-z0-9-]/g, "")
         .slice(0, 70);
 
-      const ticketChannel = await guild.channels.create({
-        name: `order-${username}`,
-        type: ChannelType.GuildText,
-        parent: category.id,
-        topic: `ticket-owner:${interaction.user.id}`,
+      // =========================
+      // CREATE TICKET
+      // =========================
 
-        permissionOverwrites: [
-          {
-            id: guild.roles.everyone.id,
-            deny: [
-              PermissionFlagsBits.ViewChannel
-            ]
-          },
+      const ticketChannel =
+        await guild.channels.create({
+          name: `order-${username}`,
+          type: ChannelType.GuildText,
+          parent: category.id,
+          topic:
+            `ticket-owner:${interaction.user.id}`,
 
-          {
-            id: interaction.user.id,
-            allow: [
-              PermissionFlagsBits.ViewChannel,
-              PermissionFlagsBits.SendMessages,
-              PermissionFlagsBits.ReadMessageHistory
-            ]
-          },
+          permissionOverwrites: [
+            {
+              id: guild.roles.everyone.id,
+              deny: [
+                PermissionFlagsBits.ViewChannel
+              ]
+            },
 
-          {
-            id: STAFF_ROLE_ID,
-            allow: [
-              PermissionFlagsBits.ViewChannel,
-              PermissionFlagsBits.SendMessages,
-              PermissionFlagsBits.ReadMessageHistory,
-              PermissionFlagsBits.ManageMessages
-            ]
-          },
+            {
+              id: interaction.user.id,
+              allow: [
+                PermissionFlagsBits.ViewChannel,
+                PermissionFlagsBits.SendMessages,
+                PermissionFlagsBits.ReadMessageHistory
+              ]
+            },
 
-          {
-            id: FOUNDER_ROLE_ID,
-            allow: [
-              PermissionFlagsBits.ViewChannel,
-              PermissionFlagsBits.SendMessages,
-              PermissionFlagsBits.ReadMessageHistory,
-              PermissionFlagsBits.ManageMessages
-            ]
-          },
+            {
+              id: STAFF_ROLE_ID,
+              allow: [
+                PermissionFlagsBits.ViewChannel,
+                PermissionFlagsBits.SendMessages,
+                PermissionFlagsBits.ReadMessageHistory,
+                PermissionFlagsBits.ManageMessages
+              ]
+            },
 
-          {
-            id: interaction.client.user.id,
-            allow: [
-              PermissionFlagsBits.ViewChannel,
-              PermissionFlagsBits.SendMessages,
-              PermissionFlagsBits.ReadMessageHistory,
-              PermissionFlagsBits.ManageChannels,
-              PermissionFlagsBits.ManageMessages
-            ]
-          }
-        ]
+            {
+              id: FOUNDER_ROLE_ID,
+              allow: [
+                PermissionFlagsBits.ViewChannel,
+                PermissionFlagsBits.SendMessages,
+                PermissionFlagsBits.ReadMessageHistory,
+                PermissionFlagsBits.ManageMessages
+              ]
+            },
+
+            {
+              id: interaction.client.user.id,
+              allow: [
+                PermissionFlagsBits.ViewChannel,
+                PermissionFlagsBits.SendMessages,
+                PermissionFlagsBits.ReadMessageHistory,
+                PermissionFlagsBits.ManageChannels,
+                PermissionFlagsBits.ManageMessages
+              ]
+            }
+          ]
+        });
+
+      // =========================
+      // TICKET OPEN INFO
+      // COMPONENTS V2
+      // =========================
+
+      const ticketInfo = new ContainerBuilder()
+        .setAccentColor(0xff8c00)
+
+        .addTextDisplayComponents(
+          text =>
+            text.setContent(
+              `# 🛒 MONROE ORDER\n\n` +
+
+              `Halo ${interaction.user} 👋\n\n` +
+
+              `Terima kasih telah membuat ticket.\n` +
+              `Staff kami akan segera membantu pesanan kamu.\n\n` +
+
+              `👤 **CUSTOMER**\n` +
+              `${interaction.user}\n\n` +
+
+              `🛡️ **STAFF**\n` +
+              `<@&${STAFF_ROLE_ID}> <@&${FOUNDER_ROLE_ID}>\n\n` +
+
+              `-# MONROE COMMUNITY © 2026`
+            )
+        );
+
+      await ticketChannel.send({
+        components: [ticketInfo],
+        flags: MessageFlags.IsComponentsV2
       });
 
-      // Pesan pembuka biasa, bukan embed
-      await ticketChannel.send(
-        `${interaction.user} <@&${STAFF_ROLE_ID}> <@&${FOUNDER_ROLE_ID}>\n\n` +
-        `🛒 **MONROE ORDER**\n\n` +
-        `Halo ${interaction.user}, silakan isi form pemesanan di bawah ini.`
-      );
+      // =========================
+      // FORM PEMESANAN
+      // PESAN BIASA
+      // =========================
 
-      // ORDER FORM PLAIN
       await ticketChannel.send(
         "📋 **FORM PEMESANAN**\n\n" +
-        "Nama       :\n" +
+        "Nama        :\n" +
         "Produk/Jasa :\n" +
-        "Jumlah     :\n" +
-        "Pembayaran :\n" +
-        "Catatan    :\n\n" +
+        "Jumlah      :\n" +
+        "Pembayaran  :\n" +
+        "Catatan     :\n\n" +
         "Silakan isi semua bagian di atas dengan lengkap."
       );
 
-      const closeRow = new ActionRowBuilder().addComponents(
-        new ButtonBuilder()
-          .setCustomId("close_ticket")
-          .setLabel("CLOSE TICKET")
-          .setEmoji("🔒")
-          .setStyle(ButtonStyle.Danger)
-      );
+      // =========================
+      // CLOSE BUTTON
+      // PESAN BIASA
+      // =========================
+
+      const closeRow =
+        new ActionRowBuilder().addComponents(
+          new ButtonBuilder()
+            .setCustomId("close_ticket")
+            .setLabel("CLOSE TICKET")
+            .setEmoji("🔒")
+            .setStyle(ButtonStyle.Danger)
+        );
 
       await ticketChannel.send({
         components: [closeRow]
       });
 
+      // =========================
+      // SUCCESS
+      // =========================
+
       return interaction.reply({
-        content: `✅ Ticket berhasil dibuat: ${ticketChannel}`,
+        content:
+          `✅ Ticket berhasil dibuat: ${ticketChannel}`,
         ephemeral: true
       });
 
     } catch (error) {
-      console.error("❌ Error membuat ticket:", error);
+      console.error(
+        "❌ Error membuat ticket:",
+        error
+      );
 
       if (!interaction.replied) {
         return interaction.reply({
@@ -241,6 +355,30 @@ async function handleTicketFeature(interaction) {
   }
 
   // =========================
+  // CONTACT STAFF
+  // =========================
+
+  if (interaction.customId === "ticket_staff") {
+    return interaction.reply({
+      content:
+        "💬 Gunakan tombol **ORDER** untuk membuat ticket dan menghubungi staff.",
+      ephemeral: true
+    });
+  }
+
+  // =========================
+  // WARRANTY
+  // =========================
+
+  if (interaction.customId === "ticket_warranty") {
+    return interaction.reply({
+      content:
+        "🛡️ Untuk pengajuan garansi, gunakan tombol **ORDER** lalu jelaskan kendala kamu di dalam ticket.",
+      ephemeral: true
+    });
+  }
+
+  // =========================
   // CLOSE TICKET
   // =========================
 
@@ -248,14 +386,21 @@ async function handleTicketFeature(interaction) {
     try {
       const channel = interaction.channel;
 
-      if (!channel.topic?.startsWith("ticket-owner:")) {
+      if (
+        !channel.topic?.startsWith(
+          "ticket-owner:"
+        )
+      ) {
         return interaction.reply({
-          content: "❌ Ini bukan channel ticket.",
+          content:
+            "❌ Ini bukan channel ticket.",
           ephemeral: true
         });
       }
 
-      const ownerId = channel.topic.split(":")[1];
+      const ownerId =
+        channel.topic.split(":")[1];
+
       const member = interaction.member;
 
       const allowed =
@@ -289,36 +434,17 @@ async function handleTicketFeature(interaction) {
       }, 3000);
 
     } catch (error) {
-      console.error("❌ Error close ticket:", error);
+      console.error(
+        "❌ Error close ticket:",
+        error
+      );
     }
   }
-
-  // =========================
-  // CONTACT STAFF
-  // =========================
-
-  if (interaction.customId === "ticket_staff") {
-    return interaction.reply({
-      content:
-        "📞 Silakan gunakan tombol **BUY / ORDER** untuk membuat ticket dan hubungi staff.",
-      ephemeral: true
-    });
-  }
-
-  // =========================
-  // HELP
-  // =========================
-
-  if (interaction.customId === "ticket_help") {
-    return interaction.reply({
-      content:
-        "❓ **HELP**\n\n" +
-        "Gunakan **BUY / ORDER** untuk membuat ticket.\n" +
-        "Jika membutuhkan bantuan, jelaskan masalah kamu di dalam ticket.",
-      ephemeral: true
-    });
-  }
 }
+
+// =========================
+// EXPORT
+// =========================
 
 module.exports = {
   sendTicketPanel,
