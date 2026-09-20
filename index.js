@@ -125,7 +125,7 @@ client.on("messageCreate", async message => {
   try {
     await handleAutoResponse(message);
     await handleModeration(message);
-    await handleAi(message);
+    await handleAI(message);
   } catch (error) {
     console.error(
       "❌ Message Error:",
