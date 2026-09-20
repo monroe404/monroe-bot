@@ -301,7 +301,7 @@ async function handleTicketFeature(interaction) {
               `${interaction.user}\n\n` +
 
               "🛡️ **STAFF**\n" +
-              `<@&${STAFF_ROLE_ID}> <@&${FOUNDER_ROLE_ID}>\n\n` +
+              `<@&${STAFF_ROLE_ID}>\n\n` +
 
               "-# MONROE COMMUNITY © 2026"
             )
