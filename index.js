@@ -29,7 +29,7 @@ const {
 
 const {
   handleAI
-} = require("./features/ai");
+} = require("./features/aiBot");
 
 // =========================
 // WEB SERVER
