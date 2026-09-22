@@ -98,6 +98,14 @@ async function searchPinterest(query) {
 async function handlePinterest(message) {
   if (message.author.bot) return;
 
+  if (
+  !message.member?.roles.cache.has(HUMAN_ROLE_ID)
+) {
+  return message.reply(
+    "❌ Kamu harus memiliki role **Human** untuk menggunakan fitur ini."
+  );
+}
+
   const content = message.content.trim();
 
   if (!content.toLowerCase().startsWith("!pin")) {
