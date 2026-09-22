@@ -45,6 +45,10 @@ const {
   handleCalculator
 } = require("./features/calculator");
 
+const {
+  handleCurrency
+} = require("./features/currency");
+
 // =========================
 // AI BOT TERPISAH
 // =========================
