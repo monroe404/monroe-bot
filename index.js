@@ -28,8 +28,12 @@ const {
 } = require("./features/autoResponse");
 
 const {
-  handleAI
-} = require("./features/aiBot");
+  changelogCommand,
+  handleChangelogFeature
+} = require("./features/changelog");
+
+// AI BOT TERPISAH
+require("./features/aiBot");
 
 // =========================
 // WEB SERVER
@@ -44,7 +48,9 @@ app.get("/", (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log("🌐 Web server berjalan di port " + PORT);
+  console.log(
+    "🌐 Web server berjalan di port " + PORT
+  );
 });
 
 // =========================
@@ -66,22 +72,33 @@ const client = new Client({
 
 client.once("ready", async () => {
   console.log("================================");
-  console.log("🤖 Bot login sebagai " + client.user.tag);
+  console.log(
+    "🤖 Bot login sebagai " +
+    client.user.tag
+  );
   console.log("================================");
 
   try {
-    // Register /setup-role
+
     await client.application.commands.set(
-      [roleCommand.toJSON()],
+      [
+        roleCommand.toJSON(),
+        changelogCommand.toJSON()
+      ],
       GUILD_ID
     );
 
-    console.log("✅ /setup-role berhasil didaftarkan.");
+    console.log(
+      "✅ Slash command berhasil didaftarkan."
+    );
+
   } catch (error) {
+
     console.error(
       "❌ Gagal mendaftarkan slash command:",
       error
     );
+
   }
 
   // Kirim panel ticket jika belum ada
@@ -92,50 +109,85 @@ client.once("ready", async () => {
 // INTERACTIONS
 // =========================
 
-client.on("interactionCreate", async interaction => {
-  try {
-    // Role feature
-    await handleRoleFeature(interaction);
+client.on(
+  "interactionCreate",
+  async interaction => {
 
-    // Ticket feature
-    await handleTicketFeature(interaction);
+    try {
 
-  } catch (error) {
-    console.error(
-      "❌ Interaction Error:",
-      error
-    );
+      // Role
+      await handleRoleFeature(
+        interaction
+      );
 
-    if (!interaction.replied && !interaction.deferred) {
-      await interaction.reply({
-        content: "❌ Terjadi kesalahan.",
-        ephemeral: true
-      }).catch(() => {});
+      // Ticket
+      await handleTicketFeature(
+        interaction
+      );
+
+      // Changelog
+      await handleChangelogFeature(
+        interaction
+      );
+
+    } catch (error) {
+
+      console.error(
+        "❌ Interaction Error:",
+        error
+      );
+
+      if (
+        !interaction.replied &&
+        !interaction.deferred
+      ) {
+
+        await interaction.reply({
+          content:
+            "❌ Terjadi kesalahan.",
+          ephemeral: true
+        }).catch(() => {});
+
+      }
     }
   }
-});
+);
 
 // =========================
 // MESSAGE
 // =========================
 
-client.on("messageCreate", async message => {
-  if (message.author.bot) return;
+client.on(
+  "messageCreate",
+  async message => {
 
-  try {
-    await handleAutoResponse(message);
-    await handleModeration(message);
-    await handleAI(message);
-  } catch (error) {
-    console.error(
-      "❌ Message Error:",
-      error
-    );
+    if (message.author.bot) return;
+
+    try {
+
+      await handleAutoResponse(
+        message
+      );
+
+      await handleModeration(
+        message
+      );
+
+    } catch (error) {
+
+      console.error(
+        "❌ Message Error:",
+        error
+      );
+
+    }
   }
-});
+);
 
 // =========================
 // LOGIN
 // =========================
 
-client.login(process.env.DISCORD_TOKEN);
+client.login(
+  process.env.DISCORD_TOKEN
+);
