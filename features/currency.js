@@ -1,4 +1,5 @@
 const { EmbedBuilder } = require("discord.js");
+const { HUMAN_ROLE_ID } = require("../config");
 
 // =========================
 // CURRENCY DATA
@@ -119,6 +120,18 @@ async function handleCurrency(message) {
     return;
   }
 
+  // =========================
+  // HUMAN ONLY
+  // =========================
+
+  if (
+    !message.member?.roles.cache.has(HUMAN_ROLE_ID)
+  ) {
+    return message.reply(
+      "❌ Kamu harus memiliki role **Human** untuk menggunakan fitur ini."
+    );
+  }
+
   const args = content
     .slice(8)
     .trim()
@@ -152,7 +165,6 @@ async function handleCurrency(message) {
   try {
     const rate = await getRate(from, to);
 
-    // Dibulatkan tanpa desimal
     const result = Math.round(amount * rate);
 
     const fromInfo =
@@ -163,20 +175,14 @@ async function handleCurrency(message) {
       currencyInfo[to] ||
       ["💰", "Tidak diketahui"];
 
-    const fromFlag = fromInfo[0];
-    const fromCountry = fromInfo[1];
-
-    const toFlag = toInfo[0];
-    const toCountry = toInfo[1];
-
     const embed = new EmbedBuilder()
       .setColor(0xF97316)
       .setTitle("💱 Currency Converter")
       .setDescription(
-        `${fromFlag} **${from} — ${fromCountry}**\n` +
+        `${fromInfo[0]} **${from} — ${fromInfo[1]}**\n` +
         `**${amount.toLocaleString("id-ID")} ${from}**\n\n` +
         `⬇️ **Dikonversi ke**\n\n` +
-        `${toFlag} **${to} — ${toCountry}**\n` +
+        `${toInfo[0]} **${to} — ${toInfo[1]}**\n` +
         `**${result.toLocaleString("id-ID")} ${to}**`
       )
       .setFooter({
@@ -212,6 +218,18 @@ async function handleCheckCurrency(message) {
 
   if (content !== "!cekuang") {
     return;
+  }
+
+  // =========================
+  // HUMAN ONLY
+  // =========================
+
+  if (
+    !message.member?.roles.cache.has(HUMAN_ROLE_ID)
+  ) {
+    return message.reply(
+      "❌ Kamu harus memiliki role **Human** untuk menggunakan fitur ini."
+    );
   }
 
   try {
@@ -290,10 +308,6 @@ async function handleCheckCurrency(message) {
     );
   }
 }
-
-// =========================
-// EXPORT
-// =========================
 
 module.exports = {
   handleCurrency,
