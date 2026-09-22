@@ -1,15 +1,39 @@
-const {
-  EmbedBuilder
-} = require("discord.js");
+const { EmbedBuilder } = require("discord.js");
 
 // =========================
 // CURRENCY CONVERTER
-// Command: !convert
-// Contoh:
-// !convert 100 USD IDR
-// !convert 500 JPY IDR
+// !convert 125 USD IDR
+// !cekuang
 // =========================
 
+let cachedCurrencies = null;
+
+// Ambil daftar mata uang
+async function getCurrencies() {
+  if (cachedCurrencies) {
+    return cachedCurrencies;
+  }
+
+  const response = await fetch(
+    "https://open.er-api.com/v6/latest/USD"
+  );
+
+  if (!response.ok) {
+    throw new Error("Currency API error");
+  }
+
+  const data = await response.json();
+
+  if (data.result !== "success") {
+    throw new Error("Currency API failed");
+  }
+
+  cachedCurrencies = Object.keys(data.rates).sort();
+
+  return cachedCurrencies;
+}
+
+// Ambil kurs
 async function getRate(from, to) {
   const response = await fetch(
     `https://open.er-api.com/v6/latest/${from}`
@@ -34,6 +58,10 @@ async function getRate(from, to) {
   return rate;
 }
 
+// =========================
+// !convert
+// =========================
+
 async function handleCurrency(message) {
   if (message.author.bot) return;
 
@@ -50,7 +78,7 @@ async function handleCurrency(message) {
 
   if (args.length !== 3) {
     return message.reply(
-      "❌ Format salah.\n\nContoh:\n`!convert 100 USD IDR`"
+      "❌ Format salah.\n\nContoh:\n`!convert 125 USD IDR`"
     );
   }
 
@@ -60,7 +88,7 @@ async function handleCurrency(message) {
 
   if (!Number.isFinite(amount) || amount <= 0) {
     return message.reply(
-      "❌ Jumlah uang tidak valid."
+      "❌ Nominal tidak valid."
     );
   }
 
@@ -76,34 +104,21 @@ async function handleCurrency(message) {
   try {
     const rate = await getRate(from, to);
 
-    const result = amount * rate;
+    const result = Math.round(amount * rate);
+
+    const formattedResult =
+      result.toLocaleString("id-ID");
 
     const embed = new EmbedBuilder()
       .setColor(0xF97316)
       .setTitle("💱 Currency Converter")
-      .addFields(
-        {
-          name: "From",
-          value: `**${amount.toLocaleString("id-ID")} ${from}**`,
-          inline: true
-        },
-        {
-          name: "To",
-          value: `**${result.toLocaleString("id-ID", {
-            maximumFractionDigits: 6
-          })} ${to}**`,
-          inline: true
-        },
-        {
-          name: "Exchange Rate",
-          value:
-            `1 ${from} = ${rate.toLocaleString("id-ID", {
-              maximumFractionDigits: 8
-            })} ${to}`
-        }
+      .setDescription(
+        `**${amount.toLocaleString("id-ID")} ${from}**\n` +
+        `≈ **${formattedResult} ${to}**`
       )
       .setFooter({
-        text: "MONROE COMMUNITY © 2026 • Kurs dapat berubah"
+        text:
+          "MONROE COMMUNITY © 2026 • Kurs dapat berubah"
       });
 
     await message.reply({
@@ -117,11 +132,100 @@ async function handleCurrency(message) {
     );
 
     await message.reply(
-      `❌ Tidak bisa mengonversi **${from} → ${to}**.\nPastikan kode mata uang tersedia.`
+      `❌ Mata uang **${from} → ${to}** tidak tersedia.`
+    );
+  }
+}
+
+// =========================
+// !cekuang
+// =========================
+
+async function handleCheckCurrency(message) {
+  if (message.author.bot) return;
+
+  const content = message.content.trim().toLowerCase();
+
+  if (content !== "!cekuang") {
+    return;
+  }
+
+  try {
+    const currencies = await getCurrencies();
+
+    // Discord embed max field description cukup besar,
+    // jadi kita bagi menjadi beberapa pesan.
+    const chunks = [];
+
+    let current = "";
+
+    for (const currency of currencies) {
+      const item = `\`${currency}\``;
+
+      if (
+        current.length + item.length + 1 > 1800
+      ) {
+        chunks.push(current);
+        current = "";
+      }
+
+      current +=
+        (current ? " • " : "") + item;
+    }
+
+    if (current) {
+      chunks.push(current);
+    }
+
+    const total = currencies.length;
+
+    await message.reply({
+      embeds: [
+        new EmbedBuilder()
+          .setColor(0xF97316)
+          .setTitle("💰 Daftar Mata Uang")
+          .setDescription(
+            `Tersedia **${total} mata uang**.\n\n` +
+            chunks[0]
+          )
+          .setFooter({
+            text:
+              "Gunakan !convert <nominal> <FROM> <TO>"
+          })
+      ]
+    });
+
+    // Kirim halaman berikutnya
+    for (let i = 1; i < chunks.length; i++) {
+      await message.channel.send({
+        embeds: [
+          new EmbedBuilder()
+            .setColor(0xF97316)
+            .setTitle(
+              `💰 Daftar Mata Uang — Halaman ${i + 1}`
+            )
+            .setDescription(chunks[i])
+            .setFooter({
+              text:
+                "MONROE COMMUNITY © 2026"
+            })
+        ]
+      });
+    }
+
+  } catch (error) {
+    console.error(
+      "❌ Check Currency Error:",
+      error
+    );
+
+    await message.reply(
+      "❌ Gagal mengambil daftar mata uang."
     );
   }
 }
 
 module.exports = {
-  handleCurrency
+  handleCurrency,
+  handleCheckCurrency
 };
