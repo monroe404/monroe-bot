@@ -36,6 +36,12 @@ const {
   handlePinterest
 } = require("./features/pinterest");
 
+const {
+  catalogCommand,
+  handleCatalogCommand,
+  handleCatalogModal
+} = require("./features/catalog");
+
 // AI BOT TERPISAH
 require("./features/aiBot");
 
