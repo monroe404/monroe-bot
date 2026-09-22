@@ -233,6 +233,10 @@ client.on(
   message
 );
 
+await handleCheckCurrency(
+  message
+);
+      
     } catch (error) {
 
       console.error(
