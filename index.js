@@ -229,6 +229,10 @@ client.on(
         message
       );
 
+      await handleCurrency(
+  message
+);
+
     } catch (error) {
 
       console.error(
