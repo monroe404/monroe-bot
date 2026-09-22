@@ -1,134 +1,165 @@
-const fs = require("fs");
-const { execSync } = require("child_process");
+const { execFileSync } = require("child_process");
+
+// ==========================================
+// MONROE AUTO CHANGELOG
+// GitHub Actions -> Groq -> Discord
+// Components V2 / No Emoji
+// ==========================================
 
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
-const CHANGELOG_CHANNEL_ID = process.env.CHANGELOG_CHANNEL_ID;
+const CHANGELOG_CHANNEL_ID =
+  process.env.CHANGELOG_CHANNEL_ID || "1550471458554380298";
 
-if (!GROQ_API_KEY) throw new Error("GROQ_API_KEY belum tersedia.");
-if (!DISCORD_TOKEN) throw new Error("DISCORD_TOKEN belum tersedia.");
-if (!CHANGELOG_CHANNEL_ID) {
-  throw new Error("CHANGELOG_CHANNEL_ID belum tersedia.");
-}
+const GROQ_MODEL = "openai/gpt-oss-120b";
 
-// =========================
-// AMBIL COMMIT TERAKHIR
-// =========================
+// ==========================================
+// HELPERS
+// ==========================================
 
-let previousTag = "";
-
-try {
-  previousTag = execSync(
-    'git tag --list "changelog-*" --sort=-creatordate | head -n 1',
-    { encoding: "utf8" }
+function runGit(args) {
+  return execFileSync(
+    "git",
+    args,
+    {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"]
+    }
   ).trim();
-} catch {}
-
-let diffCommand;
-
-if (previousTag) {
-  diffCommand = `git diff ${previousTag} HEAD -- . ':!package-lock.json'`;
-} else {
-  diffCommand = "git diff HEAD~1 HEAD -- . ':!package-lock.json'";
 }
 
-let diff = "";
-
-try {
-  diff = execSync(diffCommand, {
-    encoding: "utf8",
-    maxBuffer: 10 * 1024 * 1024
-  });
-} catch {
-  diff = "";
+function getLatestChangelogTag() {
+  try {
+    return runGit([
+      "tag",
+      "--list",
+      "changelog-*",
+      "--sort=-creatordate"
+    ]).split("\n")[0] || null;
+  } catch {
+    return null;
+  }
 }
 
-if (!diff.trim()) {
-  console.log("ℹ️ Tidak ada perubahan kode yang perlu dianalisis.");
-  process.exit(0);
+function getDiff() {
+  const latestTag = getLatestChangelogTag();
+
+  let range;
+
+  if (latestTag) {
+    range = `${latestTag}..HEAD`;
+  } else {
+    range = "HEAD~1..HEAD";
+  }
+
+  console.log(`Checking Git diff: ${range}`);
+
+  try {
+    return runGit([
+      "diff",
+      "--no-ext-diff",
+      "--unified=3",
+      range,
+      "--",
+      ".",
+      ":(exclude)package-lock.json",
+      ":(exclude).github/workflows/auto-changelog.yml"
+    ]);
+  } catch (error) {
+    console.error("Git diff error:", error.message);
+    return "";
+  }
 }
 
-// Batasi ukuran diff agar tidak terlalu besar
-if (diff.length > 100000) {
-  diff = diff.slice(0, 100000);
+// ==========================================
+// GROQ ANALYSIS
+// ==========================================
+
+async function analyzeChanges(diff) {
+  const prompt = `
+You are the release analyst for a Discord bot called MONROE COMMUNITY.
+
+Analyze the Git diff below.
+
+Your job is to identify ONLY genuine new user-facing features that were actually implemented.
+
+COUNT AS A FEATURE:
+- New Discord commands
+- New bot systems
+- New user-facing tools
+- New automation
+- New interaction systems
+- New search systems
+- New moderation systems
+- New ticket systems
+- New catalog systems
+- New converter/calculator systems
+- Major new functionality that users can actually use
+
+DO NOT COUNT:
+- Typos
+- Variable renames
+- Formatting
+- Comments
+- README changes
+- Console.log changes
+- Dependency-only changes
+- package-lock changes
+- Minor refactors
+- Code cleanup
+- Bug fixes
+- Error handling improvements
+- Internal restructuring
+- Changing colors/text only
+- Permission-only changes
+- Small UI wording changes
+- Removing features
+- Configuration-only changes
+
+IMPORTANT:
+Only report features supported by actual code in the diff.
+Do not invent features.
+Do not assume planned features exist.
+
+Return ONLY valid JSON.
+
+Format:
+
+{
+  "features": [
+    {
+      "name": "Feature name",
+      "description": "Short user-facing description",
+      "evidence": "Short explanation of what in the code proves this feature exists"
+    }
+  ]
 }
 
-// =========================
-// GROQ AI
-// =========================
+Git diff:
 
-async function analyzeChanges() {
+${diff}
+`;
+
   const response = await fetch(
     "https://api.groq.com/openai/v1/chat/completions",
     {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${GROQ_API_KEY}`
+        "Authorization": `Bearer ${GROQ_API_KEY}`
       },
       body: JSON.stringify({
-        model: "openai/gpt-oss-120b",
-        temperature: 0.1,
-
+        model: GROQ_MODEL,
+        temperature: 0,
         messages: [
           {
             role: "system",
-            content: `
-Kamu adalah AI analyzer untuk changelog sebuah Discord bot bernama Monroe.
-
-Tugasmu hanya mendeteksi FITUR BARU yang benar-benar ditambahkan atau perubahan besar
-yang menghasilkan kemampuan baru bagi pengguna.
-
-JANGAN masukkan:
-- typo
-- perubahan nama variabel
-- perubahan komentar
-- README
-- console.log
-- formatting
-- refactor internal kecil
-- dependency update tanpa fitur baru
-- perubahan kode yang tidak menghasilkan kemampuan pengguna
-- bug fix biasa
-
-Sebuah fitur harus mempunyai bukti kuat dari perubahan kode.
-
-Contoh fitur valid:
-- Pinterest Search
-- Sales Statistics
-- Calculator
-- Currency Converter
-- Claim Ticket
-- sistem role baru
-- sistem ticket baru
-- AI assistant baru
-
-Gunakan bahasa Indonesia.
-
-Balas HANYA JSON valid dengan format:
-
-{
-  "features": [
-    {
-      "name": "Nama fitur",
-      "description": "Penjelasan singkat fitur",
-      "evidence": "Bukti dari perubahan kode"
-    }
-  ]
-}
-
-Kalau tidak ada fitur baru:
-
-{
-  "features": []
-}
-`
+            content:
+              "You are a strict software release analyst. Return only valid JSON."
           },
           {
             role: "user",
-            content: `Berikut perubahan kode terbaru:
-
-${diff}`
+            content: prompt
           }
         ]
       })
@@ -137,8 +168,9 @@ ${diff}`
 
   if (!response.ok) {
     const errorText = await response.text();
+
     throw new Error(
-      `Groq API Error ${response.status}: ${errorText}`
+      `Groq API error ${response.status}: ${errorText}`
     );
   }
 
@@ -148,45 +180,130 @@ ${diff}`
     data.choices?.[0]?.message?.content?.trim();
 
   if (!content) {
-    throw new Error("Groq tidak memberikan hasil.");
+    throw new Error("Groq returned empty response.");
   }
 
-  return content;
-}
+  let cleaned = content;
 
-// =========================
-// PARSE JSON
-// =========================
+  // Remove markdown code fences if Groq adds them
+  cleaned = cleaned
+    .replace(/^```json\s*/i, "")
+    .replace(/^```\s*/i, "")
+    .replace(/\s*```$/i, "")
+    .trim();
 
-function parseAIResult(text) {
   try {
-    return JSON.parse(text);
-  } catch {}
+    return JSON.parse(cleaned);
+  } catch {
+    console.error(
+      "Groq raw response:",
+      content
+    );
 
-  const match = text.match(/\{[\s\S]*\}/);
-
-  if (!match) {
-    throw new Error("AI mengembalikan JSON yang tidak valid.");
+    throw new Error(
+      "Groq returned invalid JSON."
+    );
   }
-
-  return JSON.parse(match[0]);
 }
 
-// =========================
-// DISCORD
-// =========================
+// ==========================================
+// DISCORD COMPONENTS V2
+// ==========================================
 
-async function sendDiscordMessage(content) {
+function createTextDisplay(content) {
+  return {
+    type: 10,
+    content
+  };
+}
+
+function createSeparator() {
+  return {
+    type: 14,
+    divider: true,
+    spacing: 1
+  };
+}
+
+function createContainer(components) {
+  return {
+    type: 17,
+    components
+  };
+}
+
+function buildChangelogComponents(features) {
+  const components = [];
+
+  components.push(
+    createTextDisplay(
+      "# MONROE CHANGELOG"
+    )
+  );
+
+  components.push(
+    createSeparator()
+  );
+
+  components.push(
+    createTextDisplay(
+      "## Update terbaru\n\n" +
+      "Fitur baru yang telah ditambahkan ke Monroe Community."
+    )
+  );
+
+  components.push(
+    createSeparator()
+  );
+
+  components.push(
+    createTextDisplay(
+      "## NEW FEATURES"
+    )
+  );
+
+  for (const feature of features) {
+    components.push(
+      createTextDisplay(
+        `### ${feature.name}\n${feature.description}`
+      )
+    );
+
+    components.push(
+      createSeparator()
+    );
+  }
+
+  components.push(
+    createTextDisplay(
+      "MONROE COMMUNITY © 2026"
+    )
+  );
+
+  return [
+    createContainer(components)
+  ];
+}
+
+// ==========================================
+// SEND TO DISCORD
+// ==========================================
+
+async function sendChangelog(features) {
+  const components =
+    buildChangelogComponents(features);
+
   const response = await fetch(
     `https://discord.com/api/v10/channels/${CHANGELOG_CHANNEL_ID}/messages`,
     {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bot ${DISCORD_TOKEN}`
+        "Authorization": `Bot ${DISCORD_TOKEN}`,
+        "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        content
+        flags: 1 << 15,
+        components
       })
     }
   );
@@ -195,88 +312,204 @@ async function sendDiscordMessage(content) {
     const errorText = await response.text();
 
     throw new Error(
-      `Discord API Error ${response.status}: ${errorText}`
+      `Discord API error ${response.status}: ${errorText}`
     );
   }
+
+  console.log(
+    "Changelog berhasil dikirim ke Discord."
+  );
 }
 
-// =========================
-// MAIN
-// =========================
+// ==========================================
+// CREATE CHECKPOINT
+// ==========================================
 
-async function main() {
-  console.log("🔎 Menganalisis perubahan kode...");
+function createCheckpoint() {
+  const now = new Date();
 
-  const aiText = await analyzeChanges();
-  const result = parseAIResult(aiText);
+  const timestamp =
+    now
+      .toISOString()
+      .replace(/[-:]/g, "")
+      .replace(/\..+/, "")
+      .replace("T", "-");
 
-  const features = Array.isArray(result.features)
-    ? result.features
-    : [];
+  const tagName =
+    `changelog-${timestamp}`;
 
-  console.log(`📊 Fitur valid ditemukan: ${features.length}`);
-
-  // Minimal 5 fitur baru
-  if (features.length < 5) {
-    console.log(
-      "ℹ️ Belum mencapai 5 fitur baru. Changelog tidak dikirim."
-    );
-
-    process.exit(0);
-  }
-
-  // =========================
-  // BUAT CHANGELOG
-  // =========================
-
-  let message =
-    "## 📢 MONROE COMMUNITY — CHANGELOG\n\n" +
-    "Berikut fitur baru yang telah ditambahkan:\n\n";
-
-  features.forEach((feature, index) => {
-    message +=
-      `### ${index + 1}. ${feature.name}\n` +
-      `${feature.description}\n\n`;
-  });
-
-  message +=
-    "━━━━━━━━━━━━━━━━━━━━\n" +
-    "🛠️ **MONROE COMMUNITY © 2026**";
-
-  // Discord message limit
-  if (message.length > 2000) {
-    message = message.slice(0, 1950) + "\n\n...";
-  }
-
-  await sendDiscordMessage(message);
-
-  console.log("✅ Changelog berhasil dikirim ke Discord.");
-
-  // =========================
-  // CHECKPOINT TAG
-  // =========================
-
-  const timestamp = new Date()
-    .toISOString()
-    .replace(/[-:]/g, "")
-    .replace(/\..+/, "")
-    .replace("T", "-");
-
-  const tagName = `changelog-${timestamp}`;
-
-  execSync(`git config user.name "github-actions[bot]"`);
-  execSync(
-    `git config user.email "41898282+github-actions[bot]@users.noreply.github.com"`
+  console.log(
+    `Creating checkpoint: ${tagName}`
   );
 
-  execSync(`git tag ${tagName}`);
-  execSync(`git push origin ${tagName}`);
+  runGit([
+    "config",
+    "user.name",
+    "github-actions[bot]"
+  ]);
 
-  console.log(`🏷️ Checkpoint dibuat: ${tagName}`);
+  runGit([
+    "config",
+    "user.email",
+    "41898282+github-actions[bot]@users.noreply.github.com"
+  ]);
+
+  runGit([
+    "tag",
+    "-a",
+    tagName,
+    "-m",
+    "Automatic changelog checkpoint"
+  ]);
+
+  runGit([
+    "push",
+    "origin",
+    tagName
+  ]);
+
+  console.log(
+    `Checkpoint created: ${tagName}`
+  );
+}
+
+// ==========================================
+// MAIN
+// ==========================================
+
+async function main() {
+  console.log(
+    "========================================"
+  );
+
+  console.log(
+    "MONROE AUTO CHANGELOG"
+  );
+
+  console.log(
+    "========================================"
+  );
+
+  if (!GROQ_API_KEY) {
+    throw new Error(
+      "GROQ_API_KEY is missing."
+    );
+  }
+
+  if (!DISCORD_TOKEN) {
+    throw new Error(
+      "DISCORD_TOKEN is missing."
+    );
+  }
+
+  const diff = getDiff();
+
+  if (!diff) {
+    console.log(
+      "Tidak ada perubahan untuk dianalisis."
+    );
+
+    return;
+  }
+
+  // Prevent enormous prompts
+  const limitedDiff =
+    diff.length > 100000
+      ? diff.slice(0, 100000)
+      : diff;
+
+  console.log(
+    `Diff size: ${limitedDiff.length} characters`
+  );
+
+  console.log(
+    "Mengirim perubahan ke Groq..."
+  );
+
+  const analysis =
+    await analyzeChanges(limitedDiff);
+
+  const features =
+    Array.isArray(analysis.features)
+      ? analysis.features
+      : [];
+
+  console.log(
+    `Valid features ditemukan: ${features.length}`
+  );
+
+  // ========================================
+  // MINIMUM 5 FEATURES
+  // ========================================
+
+  if (features.length < 5) {
+    console.log(
+      "Kurang dari 5 fitur baru."
+    );
+
+    console.log(
+      "Changelog tidak dikirim."
+    );
+
+    return;
+  }
+
+  // Limit to actual detected features
+  const validFeatures =
+    features
+      .filter(
+        feature =>
+          feature &&
+          typeof feature.name === "string" &&
+          typeof feature.description === "string"
+      )
+      .slice(0, 20);
+
+  if (validFeatures.length < 5) {
+    console.log(
+      "Setelah validasi, fitur kurang dari 5."
+    );
+
+    return;
+  }
+
+  console.log(
+    "Fitur memenuhi syarat."
+  );
+
+  console.log(
+    "Mengirim Components V2 ke Discord..."
+  );
+
+  await sendChangelog(
+    validFeatures
+  );
+
+  // ========================================
+  // ONLY CREATE CHECKPOINT AFTER SUCCESS
+  // ========================================
+
+  createCheckpoint();
+
+  console.log(
+    "========================================"
+  );
+
+  console.log(
+    "AUTO CHANGELOG SELESAI"
+  );
+
+  console.log(
+    "========================================"
+  );
 }
 
 main().catch(error => {
-  console.error("❌ Auto Changelog Error:");
+  console.error(
+    "AUTO CHANGELOG ERROR:"
+  );
+
   console.error(error);
+
   process.exit(1);
 });
