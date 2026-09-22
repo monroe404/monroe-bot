@@ -32,6 +32,10 @@ const {
   handleChangelogFeature
 } = require("./features/changelog");
 
+const {
+  handlePinterest
+} = require("./features/pinterest");
+
 // AI BOT TERPISAH
 require("./features/aiBot");
 
@@ -170,6 +174,10 @@ client.on(
       );
 
       await handleModeration(
+        message
+      ); 
+
+      await handlePinterest(
         message
       );
 
