@@ -41,6 +41,10 @@ const {
   handleCatalogModal
 } = require("./features/catalog");
 
+const {
+  handleCalculator
+} = require("./features/calculator");
+
 // =========================
 // AI BOT TERPISAH
 // =========================
@@ -113,7 +117,6 @@ client.once("ready", async () => {
 
   }
 
-  // Kirim panel ticket jika belum ada
   await sendTicketPanel(client);
 });
 
@@ -127,10 +130,7 @@ client.on(
 
     try {
 
-      // =========================
-      // SLASH COMMAND
-      // =========================
-
+      // Slash command
       if (interaction.isChatInputCommand()) {
 
         if (
@@ -151,10 +151,7 @@ client.on(
 
       }
 
-      // =========================
-      // MODAL CATALOG
-      // =========================
-
+      // Catalog modal
       if (interaction.isModalSubmit()) {
 
         if (
@@ -167,10 +164,7 @@ client.on(
 
       }
 
-      // =========================
-      // BUTTON / TICKET / ROLE
-      // =========================
-
+      // Buttons / Ticket / Role
       await handleRoleFeature(
         interaction
       );
@@ -192,8 +186,7 @@ client.on(
       ) {
 
         await interaction.reply({
-          content:
-            "❌ Terjadi kesalahan.",
+          content: "❌ Terjadi kesalahan.",
           ephemeral: true
         }).catch(() => {});
 
@@ -216,18 +209,19 @@ client.on(
 
     try {
 
-      // Auto Response
       await handleAutoResponse(
         message
       );
 
-      // Moderation
       await handleModeration(
         message
       );
 
-      // Pinterest
       await handlePinterest(
+        message
+      );
+
+      await handleCalculator(
         message
       );
 
