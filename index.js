@@ -50,6 +50,10 @@ const {
   handleCheckCurrency
 } = require("./features/currency");
 
+const {
+  handleSFL
+} = require("./features/sfl");
+
 // =========================
 // AI BOT TERPISAH
 // =========================
@@ -237,6 +241,10 @@ client.on(
 await handleCheckCurrency(
   message
 );
+
+      await handleSFL(
+        message
+      );
       
     } catch (error) {
 
