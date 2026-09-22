@@ -1,4 +1,5 @@
 const { EmbedBuilder } = require("discord.js");
+const { HUMAN_ROLE_ID } = require("../config");
 
 // =========================
 // PINTEREST SEARCH
