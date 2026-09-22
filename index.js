@@ -9,6 +9,10 @@ const {
   GUILD_ID
 } = require("./config");
 
+// =========================
+// FEATURES
+// =========================
+
 const {
   roleCommand,
   handleRoleFeature
@@ -28,11 +32,6 @@ const {
 } = require("./features/autoResponse");
 
 const {
-  changelogCommand,
-  handleChangelogFeature
-} = require("./features/changelog");
-
-const {
   handlePinterest
 } = require("./features/pinterest");
 
@@ -42,7 +41,10 @@ const {
   handleCatalogModal
 } = require("./features/catalog");
 
+// =========================
 // AI BOT TERPISAH
+// =========================
+
 require("./features/aiBot");
 
 // =========================
@@ -93,7 +95,7 @@ client.once("ready", async () => {
     await client.application.commands.set(
       [
         roleCommand.toJSON(),
-        changelogCommand.toJSON()
+        catalogCommand.toJSON()
       ],
       GUILD_ID
     );
@@ -125,18 +127,55 @@ client.on(
 
     try {
 
-      // Role
+      // =========================
+      // SLASH COMMAND
+      // =========================
+
+      if (interaction.isChatInputCommand()) {
+
+        if (
+          interaction.commandName === "catalog"
+        ) {
+          return await handleCatalogCommand(
+            interaction
+          );
+        }
+
+        if (
+          interaction.commandName === "setup-role"
+        ) {
+          return await handleRoleFeature(
+            interaction
+          );
+        }
+
+      }
+
+      // =========================
+      // MODAL CATALOG
+      // =========================
+
+      if (interaction.isModalSubmit()) {
+
+        if (
+          interaction.customId === "catalog_modal"
+        ) {
+          return await handleCatalogModal(
+            interaction
+          );
+        }
+
+      }
+
+      // =========================
+      // BUTTON / TICKET / ROLE
+      // =========================
+
       await handleRoleFeature(
         interaction
       );
 
-      // Ticket
       await handleTicketFeature(
-        interaction
-      );
-
-      // Changelog
-      await handleChangelogFeature(
         interaction
       );
 
@@ -159,7 +198,9 @@ client.on(
         }).catch(() => {});
 
       }
+
     }
+
   }
 );
 
@@ -175,14 +216,17 @@ client.on(
 
     try {
 
+      // Auto Response
       await handleAutoResponse(
         message
       );
 
+      // Moderation
       await handleModeration(
         message
-      ); 
+      );
 
+      // Pinterest
       await handlePinterest(
         message
       );
@@ -195,6 +239,7 @@ client.on(
       );
 
     }
+
   }
 );
 
