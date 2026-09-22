@@ -1,19 +1,16 @@
-const {
-  EmbedBuilder
-} = require("discord.js");
+const { EmbedBuilder } = require("discord.js");
+const { HUMAN_ROLE_ID } = require("../config");
 
 // =========================
 // CALCULATOR
-// Command: !calc
+// !calc 10+5*2
 // =========================
 
 function calculate(expression) {
-  // Hanya izinkan angka dan operator matematika
   if (!/^[0-9+\-*/().%\s]+$/.test(expression)) {
     throw new Error("Invalid expression");
   }
 
-  // Tolak pola berbahaya
   if (
     expression.includes("**") ||
     expression.includes("//")
@@ -25,10 +22,7 @@ function calculate(expression) {
     `"use strict"; return (${expression})`
   )();
 
-  if (
-    typeof result !== "number" ||
-    !Number.isFinite(result)
-  ) {
+  if (!Number.isFinite(result)) {
     throw new Error("Invalid result");
   }
 
@@ -44,18 +38,33 @@ async function handleCalculator(message) {
     return;
   }
 
+  // =========================
+  // HUMAN ONLY
+  // =========================
+
+  if (
+    !message.member?.roles.cache.has(HUMAN_ROLE_ID)
+  ) {
+    return message.reply(
+      "❌ Kamu harus memiliki role **Human** untuk menggunakan fitur ini."
+    );
+  }
+
   const expression = content
     .slice(5)
     .trim();
 
   if (!expression) {
     return message.reply(
-      "❌ Contoh: `!calc 100000 + 25000`"
+      "❌ Masukkan perhitungan.\n\nContoh:\n`!calc 10+5*2`"
     );
   }
 
   try {
     const result = calculate(expression);
+
+    const formattedResult =
+      result.toLocaleString("id-ID");
 
     const embed = new EmbedBuilder()
       .setColor(0xF97316)
@@ -67,7 +76,7 @@ async function handleCalculator(message) {
         },
         {
           name: "Result",
-          value: `**${result.toLocaleString("id-ID")}**`
+          value: `**${formattedResult}**`
         }
       )
       .setFooter({
@@ -79,8 +88,8 @@ async function handleCalculator(message) {
     });
 
   } catch (error) {
-    await message.reply(
-      "❌ Perhitungan tidak valid.\n\nContoh: `!calc (100 + 50) * 2`"
+    return message.reply(
+      "❌ Perhitungan tidak valid."
     );
   }
 }
