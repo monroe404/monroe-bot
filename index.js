@@ -46,7 +46,8 @@ const {
 } = require("./features/calculator");
 
 const {
-  handleCurrency
+  handleCurrency,
+  handleCheckCurrency
 } = require("./features/currency");
 
 // =========================
