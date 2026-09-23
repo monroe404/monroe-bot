@@ -54,6 +54,12 @@ const {
   handleSFL
 } = require("./features/sfl");
 
+const {
+  prayerCommand,
+  handlePrayerCommand,
+  startPrayerSystem
+} = require("./features/prayer");
+
 // =========================
 // AI BOT TERPISAH
 // =========================
@@ -106,12 +112,13 @@ client.once("ready", async () => {
   try {
 
     await client.application.commands.set(
-      [
-        roleCommand.toJSON(),
-        catalogCommand.toJSON()
-      ],
-      GUILD_ID
-    );
+  [
+    roleCommand.toJSON(),
+    catalogCommand.toJSON(),
+    prayerCommand.toJSON()
+  ],
+  GUILD_ID
+);
 
     console.log(
       "✅ Slash command berhasil didaftarkan."
@@ -157,6 +164,14 @@ client.on(
             interaction
           );
         }
+
+        if (
+  interaction.commandName === "setup-prayer"
+) {
+  return await handlePrayerCommand(
+    interaction
+  );
+}
 
       }
 
