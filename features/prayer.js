@@ -22,7 +22,7 @@ const prayerCommand = new SlashCommandBuilder()
   .addChannelOption(option =>
     option
       .setName("channel")
-      .setDescription("Channel jadwal sholat.")
+      .setDescription("Channel untuk jadwal sholat.")
       .setRequired(true)
   )
   .setDefaultMemberPermissions(
@@ -30,41 +30,26 @@ const prayerCommand = new SlashCommandBuilder()
   );
 
 // ========================================
-// KOTA PER ZONA
+// ZONA INDONESIA
 // ========================================
 
-const zones = {
-  WIB: [
-    "Jakarta",
-    "Bandung",
-    "Surabaya",
-    "Medan",
-    "Palembang",
-    "Semarang",
-    "Yogyakarta",
-    "Bandar Lampung",
-    "Pontianak"
-  ],
-
-  WITA: [
-    "Denpasar",
-    "Makassar",
-    "Banjarmasin",
-    "Samarinda",
-    "Balikpapan",
-    "Mataram",
-    "Manado",
-    "Kupang"
-  ],
-
-  WIT: [
-    "Jayapura",
-    "Ambon",
-    "Ternate",
-    "Sorong",
-    "Manokwari"
-  ]
-};
+const zones = [
+  {
+    name: "WIB",
+    emoji: "🌅",
+    city: "Jakarta"
+  },
+  {
+    name: "WITA",
+    emoji: "☀️",
+    city: "Makassar"
+  },
+  {
+    name: "WIT",
+    emoji: "🌄",
+    city: "Jayapura"
+  }
+];
 
 // ========================================
 // NAMA SHOLAT
@@ -103,7 +88,7 @@ function canManagePrayer(member) {
 }
 
 // ========================================
-// TANGGAL
+// TANGGAL INDONESIA
 // ========================================
 
 function getToday() {
@@ -119,34 +104,53 @@ function getToday() {
 }
 
 // ========================================
+// GET DATE API
+// ========================================
+
+function getApiDate() {
+  const now = new Date();
+
+  const parts =
+    new Intl.DateTimeFormat(
+      "en-GB",
+      {
+        timeZone: "Asia/Jakarta",
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric"
+      }
+    ).formatToParts(now);
+
+  const day =
+    parts.find(
+      x => x.type === "day"
+    )?.value;
+
+  const month =
+    parts.find(
+      x => x.type === "month"
+    )?.value;
+
+  const year =
+    parts.find(
+      x => x.type === "year"
+    )?.value;
+
+  return `${day}-${month}-${year}`;
+}
+
+// ========================================
 // AMBIL JADWAL
 // ========================================
 
 async function getPrayerTimes(city) {
-  const now = new Date();
-
-  const date = new Intl.DateTimeFormat(
-    "en-GB",
-    {
-      timeZone: "Asia/Jakarta",
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric"
-    }
-  ).format(now);
-
-  const [day, month, year] =
-    date.split("/");
-
-  const address =
-    encodeURIComponent(
-      `${city}, Indonesia`
-    );
+  const date =
+    getApiDate();
 
   const url =
-    `https://api.aladhan.com/v1/timingsByAddress/` +
-    `${day}-${month}-${year}` +
-    `?address=${address}` +
+    `https://api.aladhan.com/v1/timingsByCity/` +
+    `${date}` +
+    `?city=${encodeURIComponent(city)}` +
     `&country=Indonesia` +
     `&method=20`;
 
@@ -155,7 +159,7 @@ async function getPrayerTimes(city) {
 
   if (!response.ok) {
     throw new Error(
-      `HTTP ${response.status}`
+      `API HTTP ${response.status}`
     );
   }
 
@@ -167,7 +171,7 @@ async function getPrayerTimes(city) {
     !data.data?.timings
   ) {
     throw new Error(
-      `Jadwal ${city} tidak tersedia`
+      `Jadwal ${city} tidak ditemukan`
     );
   }
 
@@ -175,177 +179,168 @@ async function getPrayerTimes(city) {
 }
 
 // ========================================
-// FORMAT KOTA
+// CLEAN TIME
 // ========================================
 
-function createCityText(
-  city,
-  timings
-) {
-  let text =
-    `### ${city}\n`;
-
-  for (const prayer of prayerOrder) {
-    const time =
-      timings[prayer]
-        ?.replace(/\s*\(.+\)/, "")
-        .trim() || "--:--";
-
-    text +=
-      `**${prayerNames[prayer]}** — \`${time}\`\n`;
+function cleanTime(time) {
+  if (!time) {
+    return "--:--";
   }
 
-  return text;
+  return time
+    .replace(/\s*\(.+\)/, "")
+    .trim();
 }
 
 // ========================================
-// BUILD ZONA
+// BUAT BARIS SHOLAT
 // ========================================
 
-async function buildZone(
-  zoneName,
-  cities
-) {
-  const result = [];
+function createPrayerRows(timings) {
+  return prayerOrder
+    .map(prayer => {
+      const time =
+        cleanTime(
+          timings[prayer]
+        );
 
-  for (const city of cities) {
-    try {
-      const timings =
-        await getPrayerTimes(city);
+      return (
+        `**${prayerNames[prayer]}**` +
+        `  \`${time}\``
+      );
+    })
+    .join("\n");
+}
 
-      result.push(
-        createCityText(
-          city,
-          timings
+// ========================================
+// BUAT CARD ZONA
+// ========================================
+
+async function createZoneContainer(zone) {
+  let timings;
+
+  try {
+    timings =
+      await getPrayerTimes(
+        zone.city
+      );
+  } catch (error) {
+    console.error(
+      `❌ ${zone.name}:`,
+      error.message
+    );
+
+    return new ContainerBuilder()
+      .setAccentColor(0xF97316)
+      .addTextDisplayComponents(
+        new TextDisplayBuilder().setContent(
+          `# ${zone.emoji} ${zone.name}\n` +
+          `**${zone.city}**\n\n` +
+          `❌ Jadwal tidak dapat diambil saat ini.`
         )
       );
-
-    } catch (error) {
-      console.error(
-        `❌ ${zoneName} - ${city}:`,
-        error.message
-      );
-    }
   }
 
-  return result;
+  const rows =
+    createPrayerRows(
+      timings
+    );
+
+  return new ContainerBuilder()
+    .setAccentColor(0xF97316)
+
+    .addTextDisplayComponents(
+      new TextDisplayBuilder().setContent(
+        `# ${zone.emoji} ${zone.name}\n` +
+        `**${zone.city}, Indonesia**`
+      )
+    )
+
+    .addSeparatorComponents(
+      new SeparatorBuilder()
+    )
+
+    .addTextDisplayComponents(
+      new TextDisplayBuilder().setContent(
+        rows
+      )
+    );
 }
 
 // ========================================
 // COMPONENTS V2
 // ========================================
 
-async function createPrayerMessage() {
-  const container =
-    new ContainerBuilder();
+async function createPrayerComponents() {
+  const components = [];
 
-  container.addTextDisplayComponents(
-    new TextDisplayBuilder().setContent(
-      `# 🕌 JADWAL SHOLAT\n` +
-      `**${getToday()}**\n` +
-      `Jadwal sholat wilayah Indonesia`
-    )
+  // HEADER
+  components.push(
+    new ContainerBuilder()
+      .setAccentColor(0xF97316)
+
+      .addTextDisplayComponents(
+        new TextDisplayBuilder().setContent(
+          `# 🕌 JADWAL SHOLAT\n` +
+          `**${getToday()}**\n` +
+          `Jadwal sholat Indonesia`
+        )
+      )
+
+      .addSeparatorComponents(
+        new SeparatorBuilder()
+      )
+
+      .addTextDisplayComponents(
+        new TextDisplayBuilder().setContent(
+          "Waktu sholat berdasarkan wilayah waktu Indonesia."
+        )
+      )
   );
 
-  container.addSeparatorComponents(
-    new SeparatorBuilder()
-  );
-
-  // ==============================
   // WIB
-  // ==============================
-
-  container.addTextDisplayComponents(
-    new TextDisplayBuilder().setContent(
-      "## 🇮🇩 WIB"
+  components.push(
+    await createZoneContainer(
+      zones[0]
     )
   );
 
-  const wib =
-    await buildZone(
-      "WIB",
-      zones.WIB
-    );
-
-  for (const city of wib) {
-    container.addTextDisplayComponents(
-      new TextDisplayBuilder().setContent(
-        city
-      )
-    );
-
-    container.addSeparatorComponents(
-      new SeparatorBuilder()
-    );
-  }
-
-  // ==============================
   // WITA
-  // ==============================
-
-  container.addTextDisplayComponents(
-    new TextDisplayBuilder().setContent(
-      "## 🇮🇩 WITA"
+  components.push(
+    await createZoneContainer(
+      zones[1]
     )
   );
 
-  const wita =
-    await buildZone(
-      "WITA",
-      zones.WITA
-    );
-
-  for (const city of wita) {
-    container.addTextDisplayComponents(
-      new TextDisplayBuilder().setContent(
-        city
-      )
-    );
-
-    container.addSeparatorComponents(
-      new SeparatorBuilder()
-    );
-  }
-
-  // ==============================
   // WIT
-  // ==============================
-
-  container.addTextDisplayComponents(
-    new TextDisplayBuilder().setContent(
-      "## 🇮🇩 WIT"
+  components.push(
+    await createZoneContainer(
+      zones[2]
     )
   );
 
-  const wit =
-    await buildZone(
-      "WIT",
-      zones.WIT
-    );
+  // FOOTER
+  components.push(
+    new ContainerBuilder()
+      .setAccentColor(0xF97316)
 
-  for (const city of wit) {
-    container.addTextDisplayComponents(
-      new TextDisplayBuilder().setContent(
-        city
+      .addTextDisplayComponents(
+        new TextDisplayBuilder().setContent(
+          "### Keterangan\n" +
+          "🇮🇩 WIB — Waktu Indonesia Barat\n" +
+          "🇮🇩 WITA — Waktu Indonesia Tengah\n" +
+          "🇮🇩 WIT — Waktu Indonesia Timur\n\n" +
+          "Jadwal dapat berbeda beberapa menit " +
+          "tergantung lokasi."
+        )
       )
-    );
-
-    container.addSeparatorComponents(
-      new SeparatorBuilder()
-    );
-  }
-
-  container.addTextDisplayComponents(
-    new TextDisplayBuilder().setContent(
-      "Jadwal dapat mengalami perbedaan beberapa menit antarwilayah."
-    )
   );
 
-  return [container];
+  return components;
 }
 
 // ========================================
-// CARI PESAN LAMA
+// CARI PESAN JADWAL
 // ========================================
 
 async function findPrayerMessage(channel) {
@@ -354,9 +349,17 @@ async function findPrayerMessage(channel) {
       limit: 50
     });
 
-  for (const message of messages.values()) {
+  for (
+    const message
+    of messages.values()
+  ) {
     if (
-      message.author.bot &&
+      !message.author.bot
+    ) {
+      continue;
+    }
+
+    if (
       message.flags.has(
         MessageFlags.IsComponentsV2
       )
@@ -369,14 +372,12 @@ async function findPrayerMessage(channel) {
 }
 
 // ========================================
-// SEND / UPDATE
+// KIRIM / UPDATE
 // ========================================
 
-async function sendPrayerSchedule(
-  channel
-) {
+async function sendPrayerSchedule(channel) {
   const components =
-    await createPrayerMessage();
+    await createPrayerComponents();
 
   const oldMessage =
     await findPrayerMessage(
@@ -404,9 +405,7 @@ async function sendPrayerSchedule(
 // SETUP CHANNEL
 // ========================================
 
-async function setupPrayerChannel(
-  channel
-) {
+async function setupPrayerChannel(channel) {
   const everyone =
     channel.guild.roles.everyone;
 
@@ -442,9 +441,7 @@ async function setupPrayerChannel(
 // COMMAND HANDLER
 // ========================================
 
-async function handlePrayerCommand(
-  interaction
-) {
+async function handlePrayerCommand(interaction) {
   if (
     !canManagePrayer(
       interaction.member
@@ -497,7 +494,7 @@ async function handlePrayerCommand(
     );
 
     return interaction.editReply(
-      "❌ Gagal mengambil jadwal sholat."
+      "❌ Gagal mengirim jadwal sholat."
     );
   }
 }
@@ -520,48 +517,53 @@ function startPrayerSystem(client) {
   }
 
   prayerInterval =
-    setInterval(async () => {
-      try {
-        const guild =
-          client.guilds.cache.first();
+    setInterval(
+      async () => {
+        try {
+          const guild =
+            client.guilds.cache.first();
 
-        if (!guild) return;
+          if (!guild) return;
 
-        const channels =
-          guild.channels.cache.filter(
-            channel =>
-              channel.isTextBased() &&
-              channel.viewable
-          );
+          const channels =
+            guild.channels.cache.filter(
+              channel =>
+                channel.isTextBased() &&
+                channel.viewable
+            );
 
-        for (
-          const channel
-          of channels.values()
-        ) {
-          try {
-            const message =
-              await findPrayerMessage(
+          for (
+            const channel
+            of channels.values()
+          ) {
+            try {
+              const message =
+                await findPrayerMessage(
+                  channel
+                );
+
+              if (!message) {
+                continue;
+              }
+
+              await sendPrayerSchedule(
                 channel
               );
 
-            if (!message) continue;
-
-            await sendPrayerSchedule(
-              channel
-            );
-
-          } catch {
-            // Abaikan channel
+            } catch {
+              // Abaikan channel
+            }
           }
-        }
 
-      } catch (error) {
-        console.error(
-          "❌ Prayer update error:",
-          error
-        );
-      }
-    }, 60 * 60 * 1000);
+        } catch (error) {
+          console.error(
+            "❌ Prayer update error:",
+            error
+          );
+        }
+      },
+      60 * 60 * 1000
+    );
 }
 
 // ========================================
