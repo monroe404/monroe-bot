@@ -13,51 +13,65 @@ const {
 } = require("../config");
 
 // ========================================
-// SETTINGS
+// COMMAND
 // ========================================
 
-const API_METHOD = 20;
+const prayerCommand = new SlashCommandBuilder()
+  .setName("setup-prayer")
+  .setDescription("Mengirim jadwal sholat Indonesia.")
+  .addChannelOption(option =>
+    option
+      .setName("channel")
+      .setDescription("Channel jadwal sholat.")
+      .setRequired(true)
+  )
+  .setDefaultMemberPermissions(
+    PermissionFlagsBits.ManageGuild
+  );
 
-const prayerZones = [
-  {
-    name: "WIB",
-    cities: [
-      "Jakarta, Indonesia",
-      "Bandung, Indonesia",
-      "Surabaya, Indonesia",
-      "Medan, Indonesia",
-      "Palembang, Indonesia",
-      "Semarang, Indonesia",
-      "Yogyakarta, Indonesia",
-      "Bandar Lampung, Indonesia",
-      "Pontianak, Indonesia"
-    ]
-  },
-  {
-    name: "WITA",
-    cities: [
-      "Denpasar, Indonesia",
-      "Makassar, Indonesia",
-      "Banjarmasin, Indonesia",
-      "Samarinda, Indonesia",
-      "Balikpapan, Indonesia",
-      "Mataram, Indonesia",
-      "Manado, Indonesia"
-    ]
-  },
-  {
-    name: "WIT",
-    cities: [
-      "Jayapura, Indonesia",
-      "Ambon, Indonesia",
-      "Ternate, Indonesia",
-      "Sorong, Indonesia"
-    ]
-  }
-];
+// ========================================
+// KOTA PER ZONA
+// ========================================
+
+const zones = {
+  WIB: [
+    "Jakarta",
+    "Bandung",
+    "Surabaya",
+    "Medan",
+    "Palembang",
+    "Semarang",
+    "Yogyakarta",
+    "Bandar Lampung",
+    "Pontianak"
+  ],
+
+  WITA: [
+    "Denpasar",
+    "Makassar",
+    "Banjarmasin",
+    "Samarinda",
+    "Balikpapan",
+    "Mataram",
+    "Manado",
+    "Kupang"
+  ],
+
+  WIT: [
+    "Jayapura",
+    "Ambon",
+    "Ternate",
+    "Sorong",
+    "Manokwari"
+  ]
+};
+
+// ========================================
+// NAMA SHOLAT
+// ========================================
 
 const prayerNames = {
-  Fajr: "Subuh",
+  Fajr: "Shubuh",
   Dhuhr: "Dzuhur",
   Asr: "Ashar",
   Maghrib: "Maghrib",
@@ -71,28 +85,6 @@ const prayerOrder = [
   "Maghrib",
   "Isha"
 ];
-
-// ========================================
-// SLASH COMMAND
-// ========================================
-
-const prayerCommand =
-  new SlashCommandBuilder()
-    .setName("setup-prayer")
-    .setDescription(
-      "Mengirim jadwal sholat seluruh Indonesia."
-    )
-    .addChannelOption(option =>
-      option
-        .setName("channel")
-        .setDescription(
-          "Channel untuk jadwal sholat."
-        )
-        .setRequired(true)
-    )
-    .setDefaultMemberPermissions(
-      PermissionFlagsBits.ManageGuild
-    );
 
 // ========================================
 // PERMISSION
@@ -111,15 +103,15 @@ function canManagePrayer(member) {
 }
 
 // ========================================
-// DATE
+// TANGGAL
 // ========================================
 
-function getIndonesiaDate() {
+function getToday() {
   return new Intl.DateTimeFormat(
     "id-ID",
     {
       timeZone: "Asia/Jakarta",
-      day: "2-digit",
+      day: "numeric",
       month: "long",
       year: "numeric"
     }
@@ -127,39 +119,43 @@ function getIndonesiaDate() {
 }
 
 // ========================================
-// API
+// AMBIL JADWAL
 // ========================================
 
 async function getPrayerTimes(city) {
   const now = new Date();
 
-  const day = String(
-    now.getDate()
-  ).padStart(2, "0");
+  const date = new Intl.DateTimeFormat(
+    "en-GB",
+    {
+      timeZone: "Asia/Jakarta",
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric"
+    }
+  ).format(now);
 
-  const month = String(
-    now.getMonth() + 1
-  ).padStart(2, "0");
-
-  const year =
-    now.getFullYear();
+  const [day, month, year] =
+    date.split("/");
 
   const address =
-    encodeURIComponent(city);
+    encodeURIComponent(
+      `${city}, Indonesia`
+    );
 
   const url =
     `https://api.aladhan.com/v1/timingsByAddress/` +
     `${day}-${month}-${year}` +
     `?address=${address}` +
     `&country=Indonesia` +
-    `&method=${API_METHOD}`;
+    `&method=20`;
 
   const response =
     await fetch(url);
 
   if (!response.ok) {
     throw new Error(
-      `Prayer API error: ${response.status}`
+      `HTTP ${response.status}`
     );
   }
 
@@ -171,7 +167,7 @@ async function getPrayerTimes(city) {
     !data.data?.timings
   ) {
     throw new Error(
-      `Data sholat tidak ditemukan untuk ${city}`
+      `Jadwal ${city} tidak tersedia`
     );
   }
 
@@ -179,76 +175,75 @@ async function getPrayerTimes(city) {
 }
 
 // ========================================
-// FORMAT TIME
+// FORMAT KOTA
 // ========================================
 
-function cleanTime(time) {
-  if (!time) return "--:--";
+function createCityText(
+  city,
+  timings
+) {
+  let text =
+    `### ${city}\n`;
 
-  return time
-    .replace(/\s*\(.+\)/, "")
-    .trim();
+  for (const prayer of prayerOrder) {
+    const time =
+      timings[prayer]
+        ?.replace(/\s*\(.+\)/, "")
+        .trim() || "--:--";
+
+    text +=
+      `**${prayerNames[prayer]}** — \`${time}\`\n`;
+  }
+
+  return text;
 }
 
 // ========================================
-// BUILD ZONE CONTENT
+// BUILD ZONA
 // ========================================
 
-async function buildZone(zone) {
-  const results = [];
+async function buildZone(
+  zoneName,
+  cities
+) {
+  const result = [];
 
-  for (const city of zone.cities) {
+  for (const city of cities) {
     try {
       const timings =
         await getPrayerTimes(city);
 
-      const cityName =
-        city.replace(
-          ", Indonesia",
-          ""
-        );
-
-      const lines = prayerOrder.map(
-        prayer => {
-          return (
-            `**${prayerNames[prayer]}** ` +
-            `\`${cleanTime(
-              timings[prayer]
-            )}\``
-          );
-        }
-      );
-
-      results.push(
-        `**${cityName}**\n` +
-        lines.join("  •  ")
+      result.push(
+        createCityText(
+          city,
+          timings
+        )
       );
 
     } catch (error) {
       console.error(
-        `❌ Gagal mengambil ${city}:`,
+        `❌ ${zoneName} - ${city}:`,
         error.message
       );
     }
   }
 
-  return results;
+  return result;
 }
 
 // ========================================
 // COMPONENTS V2
 // ========================================
 
-async function createPrayerComponents() {
+async function createPrayerMessage() {
   const container =
     new ContainerBuilder();
 
-  // HEADER
   container.addTextDisplayComponents(
     new TextDisplayBuilder().setContent(
-      "# 🕌 JADWAL SHOLAT\n" +
-      `**${getIndonesiaDate()}**\n` +
-      "Jadwal sholat berdasarkan wilayah Indonesia."
+      `# 🕌 JADWAL SHOLAT\n` +
+      `**${getToday()}**\n` +
+      `Jadwal sholat wilayah Indonesia`
     )
   );
 
@@ -256,47 +251,93 @@ async function createPrayerComponents() {
     new SeparatorBuilder()
   );
 
-  // ZONES
-  for (const zone of prayerZones) {
-    const cities =
-      await buildZone(zone);
-
-    container.addTextDisplayComponents(
-      new TextDisplayBuilder().setContent(
-        `## 🇮🇩 ${zone.name}`
-      )
-    );
-
-    if (cities.length) {
-      for (const city of cities) {
-        container.addTextDisplayComponents(
-          new TextDisplayBuilder().setContent(
-            city
-          )
-        );
-
-        container.addSeparatorComponents(
-          new SeparatorBuilder()
-        );
-      }
-    } else {
-      container.addTextDisplayComponents(
-        new TextDisplayBuilder().setContent(
-          "Data jadwal belum tersedia."
-        )
-      );
-    }
-  }
-
-  container.addSeparatorComponents(
-    new SeparatorBuilder()
-  );
+  // ==============================
+  // WIB
+  // ==============================
 
   container.addTextDisplayComponents(
     new TextDisplayBuilder().setContent(
-      "### Catatan\n" +
-      "Waktu dapat berbeda beberapa menit " +
-      "antara daerah yang berbeda dalam satu zona waktu."
+      "## 🇮🇩 WIB"
+    )
+  );
+
+  const wib =
+    await buildZone(
+      "WIB",
+      zones.WIB
+    );
+
+  for (const city of wib) {
+    container.addTextDisplayComponents(
+      new TextDisplayBuilder().setContent(
+        city
+      )
+    );
+
+    container.addSeparatorComponents(
+      new SeparatorBuilder()
+    );
+  }
+
+  // ==============================
+  // WITA
+  // ==============================
+
+  container.addTextDisplayComponents(
+    new TextDisplayBuilder().setContent(
+      "## 🇮🇩 WITA"
+    )
+  );
+
+  const wita =
+    await buildZone(
+      "WITA",
+      zones.WITA
+    );
+
+  for (const city of wita) {
+    container.addTextDisplayComponents(
+      new TextDisplayBuilder().setContent(
+        city
+      )
+    );
+
+    container.addSeparatorComponents(
+      new SeparatorBuilder()
+    );
+  }
+
+  // ==============================
+  // WIT
+  // ==============================
+
+  container.addTextDisplayComponents(
+    new TextDisplayBuilder().setContent(
+      "## 🇮🇩 WIT"
+    )
+  );
+
+  const wit =
+    await buildZone(
+      "WIT",
+      zones.WIT
+    );
+
+  for (const city of wit) {
+    container.addTextDisplayComponents(
+      new TextDisplayBuilder().setContent(
+        city
+      )
+    );
+
+    container.addSeparatorComponents(
+      new SeparatorBuilder()
+    );
+  }
+
+  container.addTextDisplayComponents(
+    new TextDisplayBuilder().setContent(
+      "Jadwal dapat mengalami perbedaan beberapa menit antarwilayah."
     )
   );
 
@@ -304,7 +345,7 @@ async function createPrayerComponents() {
 }
 
 // ========================================
-// FIND OLD MESSAGE
+// CARI PESAN LAMA
 // ========================================
 
 async function findPrayerMessage(channel) {
@@ -315,18 +356,13 @@ async function findPrayerMessage(channel) {
 
   for (const message of messages.values()) {
     if (
-      !message.author.bot
+      message.author.bot &&
+      message.flags.has(
+        MessageFlags.IsComponentsV2
+      )
     ) {
-      continue;
+      return message;
     }
-
-    if (
-      !message.components?.length
-    ) {
-      continue;
-    }
-
-    return message;
   }
 
   return null;
@@ -336,9 +372,11 @@ async function findPrayerMessage(channel) {
 // SEND / UPDATE
 // ========================================
 
-async function sendPrayerSchedule(channel) {
+async function sendPrayerSchedule(
+  channel
+) {
   const components =
-    await createPrayerComponents();
+    await createPrayerMessage();
 
   const oldMessage =
     await findPrayerMessage(
@@ -363,17 +401,12 @@ async function sendPrayerSchedule(channel) {
 }
 
 // ========================================
-// CHANNEL PERMISSIONS
+// SETUP CHANNEL
 // ========================================
 
-async function setupPrayerChannel(channel) {
-  if (!channel?.guild) {
-    throw new Error(
-      "Channel tidak valid."
-    );
-  }
-
-  // Human / member biasa hanya bisa melihat
+async function setupPrayerChannel(
+  channel
+) {
   const everyone =
     channel.guild.roles.everyone;
 
@@ -388,7 +421,6 @@ async function setupPrayerChannel(channel) {
     }
   );
 
-  // STAFF
   await channel.permissionOverwrites.edit(
     STAFF_ROLE_ID,
     {
@@ -397,7 +429,6 @@ async function setupPrayerChannel(channel) {
     }
   );
 
-  // FOUNDER
   await channel.permissionOverwrites.edit(
     FOUNDER_ROLE_ID,
     {
@@ -408,7 +439,7 @@ async function setupPrayerChannel(channel) {
 }
 
 // ========================================
-// SLASH COMMAND HANDLER
+// COMMAND HANDLER
 // ========================================
 
 async function handlePrayerCommand(
@@ -456,17 +487,17 @@ async function handlePrayerCommand(
     );
 
     return interaction.editReply(
-      `✅ Jadwal sholat berhasil dipasang di ${channel}.`
+      `✅ Jadwal sholat berhasil dikirim ke ${channel}.`
     );
 
   } catch (error) {
     console.error(
-      "❌ Prayer setup error:",
+      "❌ Prayer Error:",
       error
     );
 
     return interaction.editReply(
-      "❌ Gagal memasang jadwal sholat."
+      "❌ Gagal mengambil jadwal sholat."
     );
   }
 }
@@ -477,7 +508,7 @@ async function handlePrayerCommand(
 
 let prayerInterval = null;
 
-async function startPrayerSystem(client) {
+function startPrayerSystem(client) {
   console.log(
     "🕌 Prayer system aktif."
   );
@@ -488,17 +519,14 @@ async function startPrayerSystem(client) {
     );
   }
 
-  // Update setiap 1 jam
-  prayerInterval = setInterval(
-    async () => {
+  prayerInterval =
+    setInterval(async () => {
       try {
         const guild =
           client.guilds.cache.first();
 
         if (!guild) return;
 
-        // Cari channel yang mempunyai
-        // pesan Components V2 bot.
         const channels =
           guild.channels.cache.filter(
             channel =>
@@ -506,7 +534,10 @@ async function startPrayerSystem(client) {
               channel.viewable
           );
 
-        for (const channel of channels.values()) {
+        for (
+          const channel
+          of channels.values()
+        ) {
           try {
             const message =
               await findPrayerMessage(
@@ -520,7 +551,7 @@ async function startPrayerSystem(client) {
             );
 
           } catch {
-            // Abaikan channel yang tidak dapat diakses
+            // Abaikan channel
           }
         }
 
@@ -530,9 +561,7 @@ async function startPrayerSystem(client) {
           error
         );
       }
-    },
-    60 * 60 * 1000
-  );
+    }, 60 * 60 * 1000);
 }
 
 // ========================================
