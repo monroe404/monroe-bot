@@ -134,6 +134,7 @@ client.once("ready", async () => {
   }
 
   await sendTicketPanel(client);
+  await startPrayerSystem(client);
 });
 
 // =========================
