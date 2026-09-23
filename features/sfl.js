@@ -1,177 +1,215 @@
+const {
+  EmbedBuilder,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle
+} = require("discord.js");
+
 const { HUMAN_ROLE_ID } = require("../config");
 
-function findDestination(html, baseUrl) {
-  // Meta refresh
-  const meta =
-    html.match(
-      /<meta[^>]+http-equiv=["']?refresh["']?[^>]+content=["'][^"']*url=([^"']+)/i
-    ) ||
-    html.match(
-      /<meta[^>]+content=["'][^"']*url=([^"']+)["'][^>]+http-equiv=["']?refresh/i
-    );
+const SFL_REGEX =
+  /^https?:\/\/(?:www\.)?sfl\.gl\/[A-Za-z0-9_-]+(?:\?.*)?$/i;
 
-  if (meta?.[1]) {
-    return new URL(
-      meta[1].trim(),
-      baseUrl
-    ).href;
-  }
+async function resolvePublicRedirect(url) {
+  const controller = new AbortController();
 
-  // location.href / location.replace / location.assign
-  const jsPatterns = [
-    /location\.href\s*=\s*["']([^"']+)["']/i,
-    /location\.replace\s*\(\s*["']([^"']+)["']\s*\)/i,
-    /location\.assign\s*\(\s*["']([^"']+)["']\s*\)/i,
-    /window\.location\s*=\s*["']([^"']+)["']/i
-  ];
+  const timeout = setTimeout(() => {
+    controller.abort();
+  }, 15000);
 
-  for (const pattern of jsPatterns) {
-    const match = html.match(pattern);
-
-    if (match?.[1]) {
-      return new URL(
-        match[1],
-        baseUrl
-      ).href;
-    }
-  }
-
-  // Cari href yang terlihat seperti destination
-  const links = [
-    ...html.matchAll(
-      /href\s*=\s*["']([^"']+)["']/gi
-    )
-  ];
-
-  for (const match of links) {
-    const href = match[1];
-
-    try {
-      const target = new URL(href, baseUrl).href;
-
-      if (
-        !target.includes(new URL(baseUrl).hostname)
-      ) {
-        return target;
-      }
-    } catch {}
-  }
-
-  return null;
-}
-
-async function resolveSFL(startUrl) {
-  let currentUrl = startUrl;
-
-  for (let i = 0; i < 5; i++) {
-    const response = await fetch(currentUrl, {
+  try {
+    const response = await fetch(url, {
+      method: "GET",
       redirect: "follow",
       headers: {
         "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/140 Safari/537.36",
-        "Accept":
-          "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
-      }
+          "Mozilla/5.0 (compatible; MonroeBot/1.0)"
+      },
+      signal: controller.signal
     });
 
-    const finalHttpUrl = response.url;
+    const finalUrl = response.url;
 
+    // Redirect langsung berhasil
     if (
-      finalHttpUrl &&
-      finalHttpUrl !== currentUrl
+      finalUrl &&
+      !/sfl\.gl/i.test(finalUrl)
     ) {
-      currentUrl = finalHttpUrl;
+      return finalUrl;
     }
 
-    const contentType =
-      response.headers.get("content-type") || "";
-
-    if (!contentType.includes("text/html")) {
-      return currentUrl;
-    }
-
+    // Coba baca HTML untuk redirect publik
     const html = await response.text();
 
-    const destination =
-      findDestination(
-        html,
-        currentUrl
+    // Meta refresh
+    const metaRefresh =
+      html.match(
+        /<meta[^>]+http-equiv=["']?refresh["']?[^>]+content=["'][^"']*url=([^"']+)["']/i
       );
 
-    if (!destination) {
-      return currentUrl;
+    if (metaRefresh?.[1]) {
+      return new URL(
+        metaRefresh[1],
+        url
+      ).href;
     }
 
-    if (destination === currentUrl) {
-      return currentUrl;
+    // window.location / location.href
+    const jsRedirect =
+      html.match(
+        /(?:window\.)?location(?:\.href)?\s*=\s*["']([^"']+)["']/i
+      );
+
+    if (jsRedirect?.[1]) {
+      return new URL(
+        jsRedirect[1],
+        url
+      ).href;
     }
 
-    currentUrl = destination;
+    return null;
+
+  } finally {
+    clearTimeout(timeout);
   }
-
-  return currentUrl;
 }
 
 async function handleSFL(message) {
   if (message.author.bot) return;
 
-  const content = message.content.trim();
-
-  if (!content.toLowerCase().startsWith("!sfl")) {
-    return;
-  }
-
+  // Human only
   if (
     !message.member?.roles.cache.has(
       HUMAN_ROLE_ID
     )
   ) {
-    return message.reply(
-      "❌ Kamu harus memiliki role **Human**."
-    );
+    return;
   }
 
-  const url = content
-    .slice(4)
-    .trim();
+  const content =
+    message.content.trim();
+
+  if (
+    !content.toLowerCase().startsWith("!sfl")
+  ) {
+    return;
+  }
+
+  const url =
+    content
+      .slice(4)
+      .trim();
 
   if (!url) {
     return message.reply(
-      "❌ Masukkan link SFL.\n\n" +
-      "`!sfl https://contoh.com/xxxxx`"
+      "❌ Masukkan link SFL.\n\nContoh:\n`!sfl https://sfl.gl/TE6JwTK9`"
     );
   }
 
-  try {
-    new URL(url);
-  } catch {
+  if (!SFL_REGEX.test(url)) {
     return message.reply(
-      "❌ Link tidak valid."
+      "❌ Link yang diberikan bukan link SFL yang valid."
     );
   }
 
-  try {
-    await message.channel.sendTyping();
+  const start =
+    Date.now();
 
+  const processing =
+    await message.reply(
+      "🔎 **Memproses link SFL...**"
+    );
+
+  try {
     const destination =
-      await resolveSFL(url);
+      await resolvePublicRedirect(
+        url
+      );
+
+    const executionTime =
+      (
+        (Date.now() - start) /
+        1000
+      ).toFixed(2);
 
     if (!destination) {
-      return message.reply(
-        "❌ Destination URL tidak ditemukan."
+      return processing.edit(
+        "❌ **SFL tidak memberikan redirect publik.**\n\n" +
+        "Link kemungkinan membutuhkan CAPTCHA, Cloudflare, " +
+        "JavaScript challenge, login, atau mekanisme anti-bot."
       );
     }
 
-    await message.reply(destination);
+    // Jangan menganggap SFL sebagai destination
+    if (
+      /sfl\.gl/i.test(destination)
+    ) {
+      return processing.edit(
+        "❌ **Destination belum dapat ditemukan.**\n\n" +
+        "SFL masih berada pada halaman perantara."
+      );
+    }
+
+    const embed =
+      new EmbedBuilder()
+        .setColor(0x22c55e)
+        .setTitle(
+          "Bypass Success"
+        )
+        .addFields(
+          {
+            name: "Original Link",
+            value: `\`${url}\``
+          },
+          {
+            name: "Destination Link",
+            value: `\`${destination}\``
+          },
+          {
+            name: "Execution Time",
+            value: `\`${executionTime}s\``
+          }
+        )
+        .setFooter({
+          text:
+            `By ${message.author.username}`
+        });
+
+    const row =
+      new ActionRowBuilder()
+        .addComponents(
+          new ButtonBuilder()
+            .setLabel("Open Link")
+            .setStyle(
+              ButtonStyle.Link
+            )
+            .setURL(destination)
+        );
+
+    await processing.edit({
+      content: "",
+      embeds: [embed],
+      components: [row]
+    });
 
   } catch (error) {
     console.error(
-      "❌ SFL ERROR:",
+      "❌ SFL Resolver Error:",
       error
     );
 
-    await message.reply(
-      "❌ Link tidak dapat diproses."
+    if (
+      error.name ===
+      "AbortError"
+    ) {
+      return processing.edit(
+        "❌ **SFL terlalu lama merespons.**"
+      );
+    }
+
+    return processing.edit(
+      "❌ **Gagal memproses link SFL.**\n" +
+      "Coba lagi beberapa saat."
     );
   }
 }
