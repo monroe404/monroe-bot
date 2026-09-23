@@ -51,14 +51,14 @@ const {
 } = require("./features/currency");
 
 const {
-  handleSFL
-} = require("./features/sfl");
-
-const {
   prayerCommand,
   handlePrayerCommand,
   startPrayerSystem
 } = require("./features/prayer");
+
+const {
+  handleSFL
+} = require("./features/sfl");
 
 // =========================
 // AI BOT TERPISAH
@@ -72,15 +72,19 @@ require("./features/aiBot");
 
 const app = express();
 
-const PORT = process.env.PORT || 3000;
+const PORT =
+  process.env.PORT || 3000;
 
 app.get("/", (req, res) => {
-  res.send("Monroe Bot is Online!");
+  res.send(
+    "Monroe Bot is Online!"
+  );
 });
 
 app.listen(PORT, () => {
   console.log(
-    "🌐 Web server berjalan di port " + PORT
+    "🌐 Web server berjalan di port " +
+    PORT
   );
 });
 
@@ -101,41 +105,58 @@ const client = new Client({
 // BOT READY
 // =========================
 
-client.once("ready", async () => {
-  console.log("================================");
-  console.log(
-    "🤖 Bot login sebagai " +
-    client.user.tag
-  );
-  console.log("================================");
-
-  try {
-
-    await client.application.commands.set(
-  [
-    roleCommand.toJSON(),
-    catalogCommand.toJSON(),
-    prayerCommand.toJSON()
-  ],
-  GUILD_ID
-);
+client.once(
+  "ready",
+  async () => {
 
     console.log(
-      "✅ Slash command berhasil didaftarkan."
+      "================================"
     );
 
-  } catch (error) {
-
-    console.error(
-      "❌ Gagal mendaftarkan slash command:",
-      error
+    console.log(
+      "🤖 Bot login sebagai " +
+      client.user.tag
     );
 
+    console.log(
+      "================================"
+    );
+
+    try {
+
+      await client.application.commands.set(
+        [
+          roleCommand.toJSON(),
+          catalogCommand.toJSON(),
+          prayerCommand.toJSON()
+        ],
+        GUILD_ID
+      );
+
+      console.log(
+        "✅ Slash command berhasil didaftarkan."
+      );
+
+    } catch (error) {
+
+      console.error(
+        "❌ Gagal mendaftarkan slash command:",
+        error
+      );
+
+    }
+
+    // Ticket panel
+    await sendTicketPanel(
+      client
+    );
+
+    // Prayer system
+    await startPrayerSystem(
+      client
+    );
   }
-
-  await sendTicketPanel(client);
-  await startPrayerSystem(client);
-});
+);
 
 // =========================
 // INTERACTIONS
@@ -147,52 +168,84 @@ client.on(
 
     try {
 
-      // Slash command
-      if (interaction.isChatInputCommand()) {
+      // =========================
+      // SLASH COMMAND
+      // =========================
 
+      if (
+        interaction.isChatInputCommand()
+      ) {
+
+        // Catalog
         if (
-          interaction.commandName === "catalog"
+          interaction.commandName ===
+          "catalog"
         ) {
+
           return await handleCatalogCommand(
             interaction
           );
+
         }
 
+        // Setup Role
         if (
-          interaction.commandName === "setup-role"
+          interaction.commandName ===
+          "setup-role"
         ) {
+
           return await handleRoleFeature(
             interaction
           );
+
         }
 
+        // Setup Prayer
         if (
-  interaction.commandName === "setup-prayer"
-) {
-  return await handlePrayerCommand(
-    interaction
-  );
-}
+          interaction.commandName ===
+          "setup-prayer"
+        ) {
+
+          return await handlePrayerCommand(
+            interaction
+          );
+
+        }
 
       }
 
-      // Catalog modal
-      if (interaction.isModalSubmit()) {
+      // =========================
+      // CATALOG MODAL
+      // =========================
+
+      if (
+        interaction.isModalSubmit()
+      ) {
 
         if (
-          interaction.customId === "catalog_modal"
+          interaction.customId ===
+          "catalog_modal"
         ) {
+
           return await handleCatalogModal(
             interaction
           );
+
         }
 
       }
 
-      // Buttons / Ticket / Role
+      // =========================
+      // ROLE
+      // =========================
+
       await handleRoleFeature(
         interaction
       );
+
+      // =========================
+      // TICKET
+      // =========================
 
       await handleTicketFeature(
         interaction
@@ -211,7 +264,8 @@ client.on(
       ) {
 
         await interaction.reply({
-          content: "❌ Terjadi kesalahan.",
+          content:
+            "❌ Terjadi kesalahan.",
           ephemeral: true
         }).catch(() => {});
 
@@ -230,38 +284,66 @@ client.on(
   "messageCreate",
   async message => {
 
-    if (message.author.bot) return;
+    if (
+      message.author.bot
+    ) {
+      return;
+    }
 
     try {
+
+      // =========================
+      // AUTO RESPONSE
+      // =========================
 
       await handleAutoResponse(
         message
       );
 
+      // =========================
+      // MODERATION
+      // =========================
+
       await handleModeration(
         message
       );
+
+      // =========================
+      // PINTEREST
+      // =========================
 
       await handlePinterest(
         message
       );
 
+      // =========================
+      // CALCULATOR
+      // =========================
+
       await handleCalculator(
         message
       );
 
-      await handleCurrency(
-  message
-);
+      // =========================
+      // CURRENCY
+      // =========================
 
-await handleCheckCurrency(
-  message
-);
+      await handleCurrency(
+        message
+      );
+
+      await handleCheckCurrency(
+        message
+      );
+
+      // =========================
+      // SFL
+      // =========================
 
       await handleSFL(
         message
       );
-      
+
     } catch (error) {
 
       console.error(
