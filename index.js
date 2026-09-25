@@ -39,7 +39,8 @@ const {
   catalogCommand,
   setSlotCommand,
   handleCatalogCommand,
-  handleCatalogInteraction
+  handleCatalogInteraction,
+  handleSetSlot
 } = require("./features/catalog");
 
 const {
