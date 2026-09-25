@@ -1428,6 +1428,8 @@ module.exports = {
 
   handleCatalogCommand,
 
-  handleCatalogInteraction
+  handleCatalogInteraction,
+
+  handleSetSlot
 
 };
