@@ -219,21 +219,14 @@ client.on(
         // =========================
 
         if (
-          interaction.commandName ===
-          "setslot"
-        ) {
+  interaction.commandName ===
+  "setslot"
+) {
 
-          const {
-            handleSetSlot
-          } = require(
-            "./features/catalog"
-          );
-
-          return await handleSetSlot(
-            interaction
-          );
-        }
-      }
+  return await handleSetSlot(
+    interaction
+  );
+}
 
       // =========================
       // CATALOG MODAL
