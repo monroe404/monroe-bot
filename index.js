@@ -1,4 +1,4 @@
-const express = require("express");
+constconst express = require("express");
 
 const {
   Client,
@@ -187,7 +187,7 @@ client.on(
       ) {
 
         // =========================
-        // CATALOG
+        // SETUP CATALOG
         // =========================
 
         if (
@@ -219,35 +219,11 @@ client.on(
         // =========================
 
         if (
-  interaction.commandName ===
-  "setslot"
-) {
-
-  return await handleSetSlot(
-    interaction
-  );
-}
-
-      // =========================
-      // CATALOG MODAL
-      // =========================
-
-      if (
-        interaction.isModalSubmit()
-      ) {
-
-        if (
-          interaction.customId ===
-          "catalog_modal"
+          interaction.commandName ===
+          "setslot"
         ) {
 
-          const {
-            handleCatalogModal
-          } = require(
-            "./features/catalog"
-          );
-
-          return await handleCatalogModal(
+          return await handleSetSlot(
             interaction
           );
         }
