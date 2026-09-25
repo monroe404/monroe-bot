@@ -364,22 +364,22 @@ const setSlotCommand =
           {
             name:
               "Discord Community - Packet 1",
-            value: "community_packet1"
+            value: "build_community_packet1"
           },
           {
             name:
               "Discord Community - Packet 2",
-            value: "community_packet2"
+            value: "build_community_packet2"
           },
           {
             name:
               "Discord Roleplay - Packet A",
-            value: "roleplay_packetA"
+            value: "build_roleplay_packetA"
           },
           {
             name:
               "Discord Roleplay - Packet B",
-            value: "roleplay_packetB"
+            value: "build_roleplay_packetB"
           },
           {
             name:
@@ -389,17 +389,17 @@ const setSlotCommand =
           {
             name:
               "Modpack Android - Medium",
-            value: "android_medium"
+            value: "modpack_android_medium"
           },
           {
             name:
               "Modpack Desktop - Low",
-            value: "desktop_low"
+            value: "modpack_desktop_low"
           },
           {
             name:
               "Modpack Desktop - Medium",
-            value: "desktop_medium"
+            value: "modpack_desktop_medium"
           }
         )
     )
