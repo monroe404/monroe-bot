@@ -37,8 +37,9 @@ const {
 
 const {
   catalogCommand,
+  setSlotCommand,
   handleCatalogCommand,
-  handleCatalogModal
+  handleCatalogInteraction
 } = require("./features/catalog");
 
 const {
@@ -121,7 +122,8 @@ client.once(
       await client.application.commands.set(
         [
           roleCommand.toJSON(),
-          catalogCommand.toJSON()
+          catalogCommand.toJSON(),
+          setSlotCommand.toJSON()
         ],
         GUILD_ID
       );
@@ -160,6 +162,22 @@ client.on(
     try {
 
       // =========================
+      // CATALOG BUTTON
+      // =========================
+
+      if (
+        interaction.isButton() &&
+        interaction.customId.startsWith(
+          "catalog_"
+        )
+      ) {
+
+        return await handleCatalogInteraction(
+          interaction
+        );
+      }
+
+      // =========================
       // SLASH COMMAND
       // =========================
 
@@ -167,19 +185,24 @@ client.on(
         interaction.isChatInputCommand()
       ) {
 
-        // Catalog
+        // =========================
+        // CATALOG
+        // =========================
+
         if (
           interaction.commandName ===
-          "catalog"
+          "setup-catalog"
         ) {
 
           return await handleCatalogCommand(
             interaction
           );
-
         }
 
-        // Setup Role
+        // =========================
+        // SETUP ROLE
+        // =========================
+
         if (
           interaction.commandName ===
           "setup-role"
@@ -188,9 +211,27 @@ client.on(
           return await handleRoleFeature(
             interaction
           );
-
         }
 
+        // =========================
+        // SET SLOT
+        // =========================
+
+        if (
+          interaction.commandName ===
+          "setslot"
+        ) {
+
+          const {
+            handleSetSlot
+          } = require(
+            "./features/catalog"
+          );
+
+          return await handleSetSlot(
+            interaction
+          );
+        }
       }
 
       // =========================
@@ -206,12 +247,16 @@ client.on(
           "catalog_modal"
         ) {
 
+          const {
+            handleCatalogModal
+          } = require(
+            "./features/catalog"
+          );
+
           return await handleCatalogModal(
             interaction
           );
-
         }
-
       }
 
       // =========================
