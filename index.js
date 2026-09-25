@@ -51,12 +51,6 @@ const {
 } = require("./features/currency");
 
 const {
-  prayerCommand,
-  handlePrayerCommand,
-  startPrayerSystem
-} = require("./features/prayer");
-
-const {
   handleSFL
 } = require("./features/sfl");
 
@@ -127,8 +121,7 @@ client.once(
       await client.application.commands.set(
         [
           roleCommand.toJSON(),
-          catalogCommand.toJSON(),
-          prayerCommand.toJSON()
+          catalogCommand.toJSON()
         ],
         GUILD_ID
       );
@@ -146,13 +139,11 @@ client.once(
 
     }
 
-    // Ticket panel
-    await sendTicketPanel(
-      client
-    );
+    // =========================
+    // TICKET PANEL
+    // =========================
 
-    // Prayer system
-    await startPrayerSystem(
+    await sendTicketPanel(
       client
     );
   }
@@ -195,18 +186,6 @@ client.on(
         ) {
 
           return await handleRoleFeature(
-            interaction
-          );
-
-        }
-
-        // Setup Prayer
-        if (
-          interaction.commandName ===
-          "setup-prayer"
-        ) {
-
-          return await handlePrayerCommand(
             interaction
           );
 
