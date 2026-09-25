@@ -1390,27 +1390,36 @@ async function handleCatalogInteraction(
   }
 
   if (
-    id.startsWith(
-      "catalog_order_"
-    )
-  ) {
+  id.startsWith(
+    "catalog_order_"
+  )
+) {
 
-    const parts =
-      id.split("_");
-
-    const productKey =
-      parts[2];
-
-    const packetKey =
-      parts
-        .slice(3)
-        .join("_");
-
-    return await createOrderTicket(
-      interaction,
-      productKey,
-      packetKey
+  const orderData =
+    id.replace(
+      "catalog_order_",
+      ""
     );
+
+  const separator =
+    orderData.lastIndexOf("_");
+
+  const productKey =
+    orderData.substring(
+      0,
+      separator
+    );
+
+  const packetKey =
+    orderData.substring(
+      separator + 1
+    );
+
+  return await createOrderTicket(
+    interaction,
+    productKey,
+    packetKey
+  );
   }
 
   return true;
