@@ -24,7 +24,7 @@ async function handleModeration(message) {
 
   if (!isStaff(member)) {
     return message.reply(
-      "❌ Kamu tidak mempunyai akses moderator."
+      "perintah akan segera dilaksanakan."
     );
   }
 
