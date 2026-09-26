@@ -75,15 +75,11 @@ async function sendFreeRolePanel(
       new EmbedBuilder()
         .setColor(0xFF7A00)
         .setTitle(
-          "🟧 FREE ROLE"
+          "FREE ROLE"
         )
         .setDescription(
           [
-            "Dapatkan role server secara gratis.",
-            "",
-            "Pilih role yang ingin kamu ambil dengan menekan tombol di bawah.",
-            "",
-            "Setiap role dapat diklaim secara bebas."
+            "Kalian main di server apa guys?."
           ].join("\n")
         )
         .setFooter({
