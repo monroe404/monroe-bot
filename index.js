@@ -9,31 +9,51 @@ const {
   GUILD_ID
 } = require("./config");
 
-// =========================
-// FEATURES
-// =========================
+// ========================================
+// ROLE
+// ========================================
 
 const {
   roleCommand,
   handleRoleFeature
 } = require("./features/role");
 
+// ========================================
+// TICKET
+// ========================================
+
 const {
   sendTicketPanel,
   handleTicketFeature
 } = require("./features/ticket");
 
+// ========================================
+// MODERATION
+// ========================================
+
 const {
   handleModeration
 } = require("./features/moderation");
+
+// ========================================
+// AUTO RESPONSE
+// ========================================
 
 const {
   handleAutoResponse
 } = require("./features/autoResponse");
 
+// ========================================
+// PINTEREST
+// ========================================
+
 const {
   handlePinterest
 } = require("./features/pinterest");
+
+// ========================================
+// CATALOG
+// ========================================
 
 const {
   catalogCommand,
@@ -43,63 +63,92 @@ const {
   handleSetSlot
 } = require("./features/catalog");
 
+// ========================================
+// CALCULATOR
+// ========================================
+
 const {
   handleCalculator
 } = require("./features/calculator");
+
+// ========================================
+// CURRENCY
+// ========================================
 
 const {
   handleCurrency,
   handleCheckCurrency
 } = require("./features/currency");
 
+// ========================================
+// SFL
+// ========================================
+
 const {
   handleSFL
 } = require("./features/sfl");
 
-// =========================
-// AI BOT TERPISAH
-// =========================
+// ========================================
+// FREE ROLE
+// ========================================
+
+const {
+  freeRoleCommand,
+  handleFreeRoleCommand,
+  handleFreeRoleInteraction
+} = require("./features/freeRole");
+
+// ========================================
+// AI BOT
+// ========================================
 
 require("./features/aiBot");
 
-// =========================
-// WEB SERVER
-// =========================
+// ========================================
+// EXPRESS
+// ========================================
 
 const app = express();
 
 const PORT =
   process.env.PORT || 3000;
 
-app.get("/", (req, res) => {
-  res.send(
-    "Monroe Bot is Online!"
-  );
-});
+app.get(
+  "/",
+  (req, res) => {
+    res.send(
+      "Monroe Bot is Online!"
+    );
+  }
+);
 
-app.listen(PORT, () => {
-  console.log(
-    "🌐 Web server berjalan di port " +
-    PORT
-  );
-});
+app.listen(
+  PORT,
+  () => {
+    console.log(
+      "🌐 Web server berjalan di port " +
+      PORT
+    );
+  }
+);
 
-// =========================
+// ========================================
 // DISCORD CLIENT
-// =========================
+// ========================================
 
-const client = new Client({
-  intents: [
-    GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMembers,
-    GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent
-  ]
-});
+const client =
+  new Client({
+    intents: [
+      GatewayIntentBits.Guilds,
+      GatewayIntentBits.GuildMembers,
+      GatewayIntentBits.GuildMessages,
+      GatewayIntentBits.MessageContent
+    ]
+  });
 
-// =========================
-// BOT READY
-// =========================
+// ========================================
+// READY
+// ========================================
 
 client.once(
   "ready",
@@ -124,7 +173,8 @@ client.once(
         [
           roleCommand.toJSON(),
           catalogCommand.toJSON(),
-          setSlotCommand.toJSON()
+          setSlotCommand.toJSON(),
+          freeRoleCommand.toJSON()
         ],
         GUILD_ID
       );
@@ -142,9 +192,9 @@ client.once(
 
     }
 
-    // =========================
+    // ==================================
     // TICKET PANEL
-    // =========================
+    // ==================================
 
     await sendTicketPanel(
       client
@@ -152,9 +202,9 @@ client.once(
   }
 );
 
-// =========================
-// INTERACTIONS
-// =========================
+// ========================================
+// INTERACTION
+// ========================================
 
 client.on(
   "interactionCreate",
@@ -162,9 +212,26 @@ client.on(
 
     try {
 
-      // =========================
+      // ==================================
+      // FREE ROLE BUTTON
+      // ==================================
+
+      if (
+        interaction.isButton() &&
+        interaction.customId.startsWith(
+          "free_role_"
+        )
+      ) {
+
+        return await handleFreeRoleInteraction(
+          interaction
+        );
+
+      }
+
+      // ==================================
       // CATALOG BUTTON
-      // =========================
+      // ==================================
 
       if (
         interaction.isButton() &&
@@ -176,19 +243,35 @@ client.on(
         return await handleCatalogInteraction(
           interaction
         );
+
       }
 
-      // =========================
+      // ==================================
       // SLASH COMMAND
-      // =========================
+      // ==================================
 
       if (
         interaction.isChatInputCommand()
       ) {
 
-        // =========================
-        // SETUP CATALOG
-        // =========================
+        // ------------------------------
+        // FREE ROLE
+        // ------------------------------
+
+        if (
+          interaction.commandName ===
+          "setup-free-role"
+        ) {
+
+          return await handleFreeRoleCommand(
+            interaction
+          );
+
+        }
+
+        // ------------------------------
+        // CATALOG
+        // ------------------------------
 
         if (
           interaction.commandName ===
@@ -198,11 +281,12 @@ client.on(
           return await handleCatalogCommand(
             interaction
           );
+
         }
 
-        // =========================
-        // SETUP ROLE
-        // =========================
+        // ------------------------------
+        // ROLE
+        // ------------------------------
 
         if (
           interaction.commandName ===
@@ -212,11 +296,12 @@ client.on(
           return await handleRoleFeature(
             interaction
           );
+
         }
 
-        // =========================
+        // ------------------------------
         // SET SLOT
-        // =========================
+        // ------------------------------
 
         if (
           interaction.commandName ===
@@ -226,20 +311,22 @@ client.on(
           return await handleSetSlot(
             interaction
           );
+
         }
+
       }
 
-      // =========================
-      // ROLE
-      // =========================
+      // ==================================
+      // ROLE FEATURE
+      // ==================================
 
       await handleRoleFeature(
         interaction
       );
 
-      // =========================
-      // TICKET
-      // =========================
+      // ==================================
+      // TICKET FEATURE
+      // ==================================
 
       await handleTicketFeature(
         interaction
@@ -257,11 +344,15 @@ client.on(
         !interaction.deferred
       ) {
 
-        await interaction.reply({
-          content:
-            "❌ Terjadi kesalahan.",
-          ephemeral: true
-        }).catch(() => {});
+        await interaction
+          .reply({
+            content:
+              "❌ Terjadi kesalahan.",
+            ephemeral: true
+          })
+          .catch(
+            () => {}
+          );
 
       }
 
@@ -270,9 +361,9 @@ client.on(
   }
 );
 
-// =========================
-// MESSAGE
-// =========================
+// ========================================
+// MESSAGE CREATE
+// ========================================
 
 client.on(
   "messageCreate",
@@ -286,41 +377,41 @@ client.on(
 
     try {
 
-      // =========================
+      // ==================================
       // AUTO RESPONSE
-      // =========================
+      // ==================================
 
       await handleAutoResponse(
         message
       );
 
-      // =========================
+      // ==================================
       // MODERATION
-      // =========================
+      // ==================================
 
       await handleModeration(
         message
       );
 
-      // =========================
+      // ==================================
       // PINTEREST
-      // =========================
+      // ==================================
 
       await handlePinterest(
         message
       );
 
-      // =========================
+      // ==================================
       // CALCULATOR
-      // =========================
+      // ==================================
 
       await handleCalculator(
         message
       );
 
-      // =========================
+      // ==================================
       // CURRENCY
-      // =========================
+      // ==================================
 
       await handleCurrency(
         message
@@ -330,9 +421,9 @@ client.on(
         message
       );
 
-      // =========================
+      // ==================================
       // SFL
-      // =========================
+      // ==================================
 
       await handleSFL(
         message
@@ -350,9 +441,9 @@ client.on(
   }
 );
 
-// =========================
+// ========================================
 // LOGIN
-// =========================
+// ========================================
 
 client.login(
   process.env.DISCORD_TOKEN
