@@ -93,7 +93,7 @@ function buildResultComponents(
   container.addTextDisplayComponents(
     new TextDisplayBuilder()
       .setContent(
-        "# ⚡ SKIPLINK SUCCEED"
+        "# ⚡ BYPASS SUCCEED"
       )
   );
 
