@@ -63,7 +63,10 @@ const {
   handleFreeRoleInteraction
 } = require("./features/freeRole");
 
+// =========================
 // AI BOT
+// =========================
+
 require("./features/aiBot");
 
 // =========================
@@ -113,12 +116,16 @@ client.once("ready", async () => {
   try {
     await client.application.commands.set(
       [
+        // ROLE
         roleCommand.toJSON(),
 
+        // CATALOG
         catalogCommand.toJSON(),
 
+        // SLOT
         setSlotCommand.toJSON(),
 
+        // FREE ROLE
         freeRoleCommand.toJSON(),
 
         // MODERATION
@@ -148,7 +155,7 @@ client.once("ready", async () => {
 });
 
 // =========================
-// INTERACTION
+// INTERACTION CREATE
 // =========================
 
 client.on(
@@ -157,7 +164,15 @@ client.on(
     try {
 
       // =========================
-      // MODERATION SLASH COMMAND
+      // MODERATION
+      // /clear
+      // /kickm
+      // /banm
+      // /tom
+      // /lockm
+      // /unlockm
+      // /warnm
+      // /rolem
       // =========================
 
       if (interaction.isChatInputCommand()) {
@@ -290,44 +305,72 @@ client.on(
   "messageCreate",
   async message => {
 
+    // Abaikan pesan bot
     if (message.author.bot) return;
 
     try {
 
+      // =========================
       // AUTO RESPONSE
+      // =========================
+
       await handleAutoResponse(
         message
       );
 
-      // PINTEREST !pin
+      // =========================
+      // PINTEREST
+      // !pin
+      // =========================
+
       await handlePinterest(
         message
       );
 
-      // CALCULATOR !calc
+      // =========================
+      // CALCULATOR
+      // !calc
+      // =========================
+
       await handleCalculator(
         message
       );
 
-      // CURRENCY !convert
+      // =========================
+      // CURRENCY
+      // !convert
+      // =========================
+
       await handleCurrency(
         message
       );
 
+      // =========================
       // CEK UANG
+      // =========================
+
       await handleCheckCurrency(
         message
       );
 
-      // SFL !sfl
+      // =========================
+      // AUTO SKIPLINK
+      // HANYA CHANNEL
+      // 1551955190687731732
+      // =========================
+
       await handleSFL(
         message
       );
 
-      // NOTE:
-      // MODERATION TIDAK ADA DI SINI.
-      // Semua moderation sudah menggunakan /
-      
+      // =========================
+      // JANGAN TAMBAHKAN
+      // handleModeration(message)
+      // DI SINI.
+      //
+      // MODERATOR SUDAH SLASH COMMAND.
+      // =========================
+
     } catch (error) {
       console.error(
         "❌ Message Error:",
