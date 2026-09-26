@@ -1,87 +1,85 @@
-const {
-  EmbedBuilder,
-  ActionRowBuilder,
-  ButtonBuilder,
-  ButtonStyle
-} = require("discord.js");
+const SFL_API_URL =
+  "https://zennq.my.id/api/bypass";
 
-const { HUMAN_ROLE_ID } = require("../config");
+// ========================================
+// SFL BYPASS
+// ========================================
 
-const SFL_REGEX =
-  /^https?:\/\/(?:www\.)?sfl\.gl\/[A-Za-z0-9_-]+(?:\?.*)?$/i;
+async function bypassSFL(url) {
+  if (!url) {
+    throw new Error(
+      "URL belum diberikan."
+    );
+  }
 
-async function resolvePublicRedirect(url) {
-  const controller = new AbortController();
+  const apiKey =
+    process.env.SFL_API_KEY;
 
-  const timeout = setTimeout(() => {
-    controller.abort();
-  }, 15000);
+  if (!apiKey) {
+    throw new Error(
+      "SFL_API_KEY belum dipasang di Railway."
+    );
+  }
+
+  const response =
+    await fetch(
+      SFL_API_URL,
+      {
+        method: "POST",
+
+        headers: {
+          "Content-Type":
+            "application/json",
+
+          "x-api-key":
+            apiKey
+        },
+
+        body: JSON.stringify({
+          url
+        })
+      }
+    );
+
+  let data;
 
   try {
-    const response = await fetch(url, {
-      method: "GET",
-      redirect: "follow",
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (compatible; MonroeBot/1.0)"
-      },
-      signal: controller.signal
-    });
-
-    const finalUrl = response.url;
-
-    // Redirect langsung berhasil
-    if (
-      finalUrl &&
-      !/sfl\.gl/i.test(finalUrl)
-    ) {
-      return finalUrl;
-    }
-
-    // Coba baca HTML untuk redirect publik
-    const html = await response.text();
-
-    // Meta refresh
-    const metaRefresh =
-      html.match(
-        /<meta[^>]+http-equiv=["']?refresh["']?[^>]+content=["'][^"']*url=([^"']+)["']/i
-      );
-
-    if (metaRefresh?.[1]) {
-      return new URL(
-        metaRefresh[1],
-        url
-      ).href;
-    }
-
-    // window.location / location.href
-    const jsRedirect =
-      html.match(
-        /(?:window\.)?location(?:\.href)?\s*=\s*["']([^"']+)["']/i
-      );
-
-    if (jsRedirect?.[1]) {
-      return new URL(
-        jsRedirect[1],
-        url
-      ).href;
-    }
-
-    return null;
-
-  } finally {
-    clearTimeout(timeout);
+    data =
+      await response.json();
+  } catch {
+    throw new Error(
+      "API mengembalikan response yang tidak valid."
+    );
   }
+
+  if (!response.ok) {
+    throw new Error(
+      data?.message ||
+      `API Error ${response.status}`
+    );
+  }
+
+  const bypassedUrl =
+    data?.data?.bypassedUrl;
+
+  if (!bypassedUrl) {
+    throw new Error(
+      data?.message ||
+      "API tidak mengembalikan bypassedUrl."
+    );
+  }
+
+  return bypassedUrl;
 }
 
-async function handleSFL(message) {
-  if (message.author.bot) return;
+// ========================================
+// DISCORD MESSAGE
+// ========================================
 
-  // Human only
+async function handleSFL(message) {
   if (
-    !message.member?.roles.cache.has(
-      HUMAN_ROLE_ID
-    )
+    !message ||
+    message.author.bot
   ) {
     return;
   }
@@ -90,130 +88,49 @@ async function handleSFL(message) {
     message.content.trim();
 
   if (
-    !content.toLowerCase().startsWith("!sfl")
+    !content.toLowerCase()
+      .startsWith("!sfl ")
   ) {
     return;
   }
 
   const url =
     content
-      .slice(4)
+      .slice(5)
       .trim();
 
   if (!url) {
-    return message.reply(
-      "❌ Masukkan link SFL.\n\nContoh:\n`!sfl https://sfl.gl/TE6JwTK9`"
-    );
-  }
-
-  if (!SFL_REGEX.test(url)) {
-    return message.reply(
-      "❌ Link yang diberikan bukan link SFL yang valid."
-    );
-  }
-
-  const start =
-    Date.now();
-
-  const processing =
     await message.reply(
-      "🔎 **Memproses link SFL...**"
+      "❌ Masukkan URL SFL.\n\nContoh: `!sfl https://sfl.gl/xxx`"
     );
+
+    return;
+  }
 
   try {
-    const destination =
-      await resolvePublicRedirect(
-        url
-      );
 
-    const executionTime =
-      (
-        (Date.now() - start) /
-        1000
-      ).toFixed(2);
+    const result =
+      await bypassSFL(url);
 
-    if (!destination) {
-      return processing.edit(
-        "❌ **SFL tidak memberikan redirect publik.**\n\n" +
-        "Link kemungkinan membutuhkan CAPTCHA, Cloudflare, " +
-        "JavaScript challenge, login, atau mekanisme anti-bot."
-      );
-    }
-
-    // Jangan menganggap SFL sebagai destination
-    if (
-      /sfl\.gl/i.test(destination)
-    ) {
-      return processing.edit(
-        "❌ **Destination belum dapat ditemukan.**\n\n" +
-        "SFL masih berada pada halaman perantara."
-      );
-    }
-
-    const embed =
-      new EmbedBuilder()
-        .setColor(0x22c55e)
-        .setTitle(
-          "Bypass Success"
-        )
-        .addFields(
-          {
-            name: "Original Link",
-            value: `\`${url}\``
-          },
-          {
-            name: "Destination Link",
-            value: `\`${destination}\``
-          },
-          {
-            name: "Execution Time",
-            value: `\`${executionTime}s\``
-          }
-        )
-        .setFooter({
-          text:
-            `By ${message.author.username}`
-        });
-
-    const row =
-      new ActionRowBuilder()
-        .addComponents(
-          new ButtonBuilder()
-            .setLabel("Open Link")
-            .setStyle(
-              ButtonStyle.Link
-            )
-            .setURL(destination)
-        );
-
-    await processing.edit({
-      content: "",
-      embeds: [embed],
-      components: [row]
-    });
+    await message.reply(
+      `✅ **SFL Result**\n${result}`
+    );
 
   } catch (error) {
+
     console.error(
-      "❌ SFL Resolver Error:",
+      "❌ SFL Error:",
       error
     );
 
-    if (
-      error.name ===
-      "AbortError"
-    ) {
-      return processing.edit(
-        "❌ **SFL terlalu lama merespons.**"
-      );
-    }
-
-    return processing.edit(
-      "❌ **Gagal memproses link SFL.**\n" +
-      "Coba lagi beberapa saat."
+    await message.reply(
+      `❌ Gagal memproses URL.\n\`${error.message}\``
     );
+
   }
 }
 
 module.exports = {
+  bypassSFL,
   handleSFL
 };
