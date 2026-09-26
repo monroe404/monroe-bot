@@ -9,18 +9,19 @@ const {
   MessageFlags
 } = require("discord.js");
 
+const SFL_CHANNEL_ID =
+  "1551955190687731732";
+
 const SFL_API_URL =
   "https://zennq.my.id/api/bypass";
 
-// ========================================
-// SFL BYPASS
-// ========================================
+// =========================
+// BYPASS API
+// =========================
 
 async function bypassSFL(url) {
   if (!url) {
-    throw new Error(
-      "URL belum diberikan."
-    );
+    throw new Error("URL belum diberikan.");
   }
 
   const apiKey =
@@ -32,22 +33,21 @@ async function bypassSFL(url) {
     );
   }
 
-  const response =
-    await fetch(
-      SFL_API_URL,
-      {
-        method: "POST",
+  const response = await fetch(
+    SFL_API_URL,
+    {
+      method: "POST",
 
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": apiKey
-        },
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": apiKey
+      },
 
-        body: JSON.stringify({
-          url
-        })
-      }
-    );
+      body: JSON.stringify({
+        url
+      })
+    }
+  );
 
   let data;
 
@@ -79,9 +79,9 @@ async function bypassSFL(url) {
   return bypassedUrl;
 }
 
-// ========================================
-// COMPONENTS V2
-// ========================================
+// =========================
+// RESULT COMPONENT
+// =========================
 
 function buildResultComponents(
   resultUrl
@@ -90,20 +90,12 @@ function buildResultComponents(
     new ContainerBuilder()
       .setAccentColor(0xFF7A00);
 
-  // ======================================
-  // TITLE
-  // ======================================
-
   container.addTextDisplayComponents(
     new TextDisplayBuilder()
       .setContent(
-        "# ⚡ BYPASS BERHASIL"
+        "# ⚡ SKIPLINK BYPASS"
       )
   );
-
-  // ======================================
-  // SEPARATOR
-  // ======================================
 
   container.addSeparatorComponents(
     new SeparatorBuilder()
@@ -111,10 +103,6 @@ function buildResultComponents(
         SeparatorSpacingSize.Small
       )
   );
-
-  // ======================================
-  // RESULT
-  // ======================================
 
   container.addTextDisplayComponents(
     new TextDisplayBuilder()
@@ -125,103 +113,86 @@ function buildResultComponents(
       )
   );
 
-  // ======================================
-  // DOWNLOAD BUTTON
-  // ======================================
-
   const row =
     new ActionRowBuilder()
       .addComponents(
         new ButtonBuilder()
-          .setLabel(
-            "DOWNLOAD"
-          )
-          .setEmoji(
-            "📥"
-          )
-          .setStyle(
-            ButtonStyle.Link
-          )
-          .setURL(
-            resultUrl
-          )
+          .setLabel("DOWNLOAD")
+          .setEmoji("📥")
+          .setStyle(ButtonStyle.Link)
+          .setURL(resultUrl)
       );
 
   container.addActionRowComponents(
     row
   );
 
-  return [
-    container
-  ];
+  return [container];
 }
 
-// ========================================
-// DISCORD MESSAGE
-// ========================================
+// =========================
+// URL DETECTOR
+// =========================
+
+function extractUrl(content) {
+  if (!content) return null;
+
+  const match =
+    content.match(
+      /https?:\/\/[^\s<]+/i
+    );
+
+  if (!match) return null;
+
+  return match[0]
+    .replace(/[)>.,!?]+$/, "");
+}
+
+// =========================
+// HANDLE AUTO BYPASS
+// =========================
 
 async function handleSFL(message) {
-  if (
-    !message ||
-    message.author.bot
-  ) {
-    return;
-  }
+  if (!message) return;
 
-  const content =
-    message.content.trim();
+  if (message.author.bot) return;
 
+  // HANYA CHANNEL SKIPLINK
   if (
-    !content
-      .toLowerCase()
-      .startsWith("!sfl ")
+    message.channel.id !==
+    SFL_CHANNEL_ID
   ) {
     return;
   }
 
   const url =
-    content
-      .slice(5)
-      .trim();
+    extractUrl(message.content);
 
-  if (!url) {
-    await message.reply({
-      content:
-        "❌ Masukkan URL SFL.\n\nContoh: `!sfl https://sfl.gl/xxx`"
-    });
-
-    return;
-  }
+  if (!url) return;
 
   try {
-
     const result =
       await bypassSFL(url);
 
     const components =
-      buildResultComponents(
-        result
-      );
+      buildResultComponents(result);
 
     await message.reply({
       components,
-
       flags:
         MessageFlags.IsComponentsV2
     });
 
   } catch (error) {
-
     console.error(
-      "❌ SFL Error:",
+      "❌ Skiplink Error:",
       error
     );
 
     await message.reply({
       content:
-        `❌ Gagal memproses URL.\n\`${error.message}\``
+        "❌ Link gagal diproses."
     });
-
   }
 }
 
