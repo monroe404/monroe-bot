@@ -1,3 +1,14 @@
+const {
+  ContainerBuilder,
+  TextDisplayBuilder,
+  SeparatorBuilder,
+  SeparatorSpacingSize,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  MessageFlags
+} = require("discord.js");
+
 const SFL_API_URL =
   "https://zennq.my.id/api/bypass";
 
@@ -28,11 +39,8 @@ async function bypassSFL(url) {
         method: "POST",
 
         headers: {
-          "Content-Type":
-            "application/json",
-
-          "x-api-key":
-            apiKey
+          "Content-Type": "application/json",
+          "x-api-key": apiKey
         },
 
         body: JSON.stringify({
@@ -44,8 +52,7 @@ async function bypassSFL(url) {
   let data;
 
   try {
-    data =
-      await response.json();
+    data = await response.json();
   } catch {
     throw new Error(
       "API mengembalikan response yang tidak valid."
@@ -73,6 +80,83 @@ async function bypassSFL(url) {
 }
 
 // ========================================
+// COMPONENTS V2
+// ========================================
+
+function buildResultComponents(
+  resultUrl
+) {
+  const container =
+    new ContainerBuilder()
+      .setAccentColor(0xFF7A00);
+
+  // ======================================
+  // TITLE
+  // ======================================
+
+  container.addTextDisplayComponents(
+    new TextDisplayBuilder()
+      .setContent(
+        "# ⚡ SFL BYPASS"
+      )
+  );
+
+  // ======================================
+  // SEPARATOR
+  // ======================================
+
+  container.addSeparatorComponents(
+    new SeparatorBuilder()
+      .setSpacing(
+        SeparatorSpacingSize.Small
+      )
+  );
+
+  // ======================================
+  // RESULT
+  // ======================================
+
+  container.addTextDisplayComponents(
+    new TextDisplayBuilder()
+      .setContent(
+        "### ✅ Link berhasil diproses\n" +
+        "Link kamu sudah berhasil dilewati dan siap digunakan.\n\n" +
+        "Tekan tombol **DOWNLOAD** di bawah untuk membuka hasilnya."
+      )
+  );
+
+  // ======================================
+  // DOWNLOAD BUTTON
+  // ======================================
+
+  const row =
+    new ActionRowBuilder()
+      .addComponents(
+        new ButtonBuilder()
+          .setLabel(
+            "DOWNLOAD"
+          )
+          .setEmoji(
+            "📥"
+          )
+          .setStyle(
+            ButtonStyle.Link
+          )
+          .setURL(
+            resultUrl
+          )
+      );
+
+  container.addActionRowComponents(
+    row
+  );
+
+  return [
+    container
+  ];
+}
+
+// ========================================
 // DISCORD MESSAGE
 // ========================================
 
@@ -88,7 +172,8 @@ async function handleSFL(message) {
     message.content.trim();
 
   if (
-    !content.toLowerCase()
+    !content
+      .toLowerCase()
       .startsWith("!sfl ")
   ) {
     return;
@@ -100,9 +185,10 @@ async function handleSFL(message) {
       .trim();
 
   if (!url) {
-    await message.reply(
-      "❌ Masukkan URL SFL.\n\nContoh: `!sfl https://sfl.gl/xxx`"
-    );
+    await message.reply({
+      content:
+        "❌ Masukkan URL SFL.\n\nContoh: `!sfl https://sfl.gl/xxx`"
+    });
 
     return;
   }
@@ -112,9 +198,17 @@ async function handleSFL(message) {
     const result =
       await bypassSFL(url);
 
-    await message.reply(
-      `✅ **SFL Result**\n${result}`
-    );
+    const components =
+      buildResultComponents(
+        result
+      );
+
+    await message.reply({
+      components,
+
+      flags:
+        MessageFlags.IsComponentsV2
+    });
 
   } catch (error) {
 
@@ -123,14 +217,16 @@ async function handleSFL(message) {
       error
     );
 
-    await message.reply(
-      `❌ Gagal memproses URL.\n\`${error.message}\``
-    );
+    await message.reply({
+      content:
+        `❌ Gagal memproses URL.\n\`${error.message}\``
+    });
 
   }
 }
 
 module.exports = {
   bypassSFL,
+  buildResultComponents,
   handleSFL
 };
