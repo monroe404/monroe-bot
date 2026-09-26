@@ -9,51 +9,32 @@ const {
   GUILD_ID
 } = require("./config");
 
-// ========================================
-// ROLE
-// ========================================
+// =========================
+// FEATURES
+// =========================
 
 const {
   roleCommand,
   handleRoleFeature
 } = require("./features/role");
 
-// ========================================
-// TICKET
-// ========================================
-
 const {
   sendTicketPanel,
   handleTicketFeature
 } = require("./features/ticket");
 
-// ========================================
-// MODERATION
-// ========================================
-
 const {
-  handleModeration
+  moderationCommands,
+  handleModerationInteraction
 } = require("./features/moderation");
-
-// ========================================
-// AUTO RESPONSE
-// ========================================
 
 const {
   handleAutoResponse
 } = require("./features/autoResponse");
 
-// ========================================
-// PINTEREST
-// ========================================
-
 const {
   handlePinterest
 } = require("./features/pinterest");
-
-// ========================================
-// CATALOG
-// ========================================
 
 const {
   catalogCommand,
@@ -63,34 +44,18 @@ const {
   handleSetSlot
 } = require("./features/catalog");
 
-// ========================================
-// CALCULATOR
-// ========================================
-
 const {
   handleCalculator
 } = require("./features/calculator");
-
-// ========================================
-// CURRENCY
-// ========================================
 
 const {
   handleCurrency,
   handleCheckCurrency
 } = require("./features/currency");
 
-// ========================================
-// SFL
-// ========================================
-
 const {
   handleSFL
 } = require("./features/sfl");
-
-// ========================================
-// FREE ROLE
-// ========================================
 
 const {
   freeRoleCommand,
@@ -98,123 +63,115 @@ const {
   handleFreeRoleInteraction
 } = require("./features/freeRole");
 
-// ========================================
 // AI BOT
-// ========================================
-
 require("./features/aiBot");
 
-// ========================================
+// =========================
 // EXPRESS
-// ========================================
+// =========================
 
 const app = express();
 
 const PORT =
   process.env.PORT || 3000;
 
-app.get(
-  "/",
-  (req, res) => {
-    res.send(
-      "Monroe Bot is Online!"
-    );
-  }
-);
+app.get("/", (req, res) => {
+  res.send("Monroe Bot is Online!");
+});
 
-app.listen(
-  PORT,
-  () => {
-    console.log(
-      "🌐 Web server berjalan di port " +
-      PORT
-    );
-  }
-);
+app.listen(PORT, () => {
+  console.log(
+    "🌐 Web server berjalan di port " + PORT
+  );
+});
 
-// ========================================
+// =========================
 // DISCORD CLIENT
-// ========================================
+// =========================
 
-const client =
-  new Client({
-    intents: [
-      GatewayIntentBits.Guilds,
-      GatewayIntentBits.GuildMembers,
-      GatewayIntentBits.GuildMessages,
-      GatewayIntentBits.MessageContent
-    ]
-  });
+const client = new Client({
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent
+  ]
+});
 
-// ========================================
+// =========================
 // READY
-// ========================================
+// =========================
 
-client.once(
-  "ready",
-  async () => {
-
-    console.log(
-      "================================"
-    );
-
-    console.log(
-      "🤖 Bot login sebagai " +
+client.once("ready", async () => {
+  console.log("================================");
+  console.log(
+    "🤖 Bot login sebagai " +
       client.user.tag
+  );
+  console.log("================================");
+
+  try {
+    await client.application.commands.set(
+      [
+        roleCommand.toJSON(),
+
+        catalogCommand.toJSON(),
+
+        setSlotCommand.toJSON(),
+
+        freeRoleCommand.toJSON(),
+
+        // MODERATION
+        ...moderationCommands
+      ],
+      GUILD_ID
     );
 
     console.log(
-      "================================"
+      "✅ Slash command berhasil didaftarkan."
     );
-
-    try {
-
-      await client.application.commands.set(
-        [
-          roleCommand.toJSON(),
-          catalogCommand.toJSON(),
-          setSlotCommand.toJSON(),
-          freeRoleCommand.toJSON()
-        ],
-        GUILD_ID
-      );
-
-      console.log(
-        "✅ Slash command berhasil didaftarkan."
-      );
-
-    } catch (error) {
-
-      console.error(
-        "❌ Gagal mendaftarkan slash command:",
-        error
-      );
-
-    }
-
-    // ==================================
-    // TICKET PANEL
-    // ==================================
-
-    await sendTicketPanel(
-      client
+  } catch (error) {
+    console.error(
+      "❌ Gagal mendaftarkan slash command:",
+      error
     );
   }
-);
 
-// ========================================
+  try {
+    await sendTicketPanel(client);
+  } catch (error) {
+    console.error(
+      "❌ Gagal mengirim Ticket Panel:",
+      error
+    );
+  }
+});
+
+// =========================
 // INTERACTION
-// ========================================
+// =========================
 
 client.on(
   "interactionCreate",
   async interaction => {
-
     try {
 
-      // ==================================
+      // =========================
+      // MODERATION SLASH COMMAND
+      // =========================
+
+      if (interaction.isChatInputCommand()) {
+        const handled =
+          await handleModerationInteraction(
+            interaction
+          );
+
+        if (handled) return;
+      }
+
+      // =========================
       // FREE ROLE BUTTON
-      // ==================================
+      // =========================
 
       if (
         interaction.isButton() &&
@@ -222,16 +179,14 @@ client.on(
           "free_role_"
         )
       ) {
-
         return await handleFreeRoleInteraction(
           interaction
         );
-
       }
 
-      // ==================================
+      // =========================
       // CATALOG BUTTON
-      // ==================================
+      // =========================
 
       if (
         interaction.isButton() &&
@@ -239,101 +194,75 @@ client.on(
           "catalog_"
         )
       ) {
-
         return await handleCatalogInteraction(
           interaction
         );
-
       }
 
-      // ==================================
+      // =========================
       // SLASH COMMAND
-      // ==================================
+      // =========================
 
-      if (
-        interaction.isChatInputCommand()
-      ) {
+      if (interaction.isChatInputCommand()) {
 
-        // ------------------------------
-        // FREE ROLE
-        // ------------------------------
-
+        // /setup-free-role
         if (
           interaction.commandName ===
           "setup-free-role"
         ) {
-
           return await handleFreeRoleCommand(
             interaction
           );
-
         }
 
-        // ------------------------------
-        // CATALOG
-        // ------------------------------
-
+        // /setup-catalog
         if (
           interaction.commandName ===
           "setup-catalog"
         ) {
-
           return await handleCatalogCommand(
             interaction
           );
-
         }
 
-        // ------------------------------
-        // ROLE
-        // ------------------------------
-
+        // /setup-role
         if (
           interaction.commandName ===
           "setup-role"
         ) {
-
           return await handleRoleFeature(
             interaction
           );
-
         }
 
-        // ------------------------------
-        // SET SLOT
-        // ------------------------------
-
+        // /setslot
         if (
           interaction.commandName ===
           "setslot"
         ) {
-
           return await handleSetSlot(
             interaction
           );
-
         }
-
       }
 
-      // ==================================
+      // =========================
       // ROLE FEATURE
-      // ==================================
+      // =========================
 
       await handleRoleFeature(
         interaction
       );
 
-      // ==================================
+      // =========================
       // TICKET FEATURE
-      // ==================================
+      // =========================
 
       await handleTicketFeature(
         interaction
       );
 
     } catch (error) {
-
       console.error(
         "❌ Interaction Error:",
         error
@@ -343,107 +272,74 @@ client.on(
         !interaction.replied &&
         !interaction.deferred
       ) {
-
-        await interaction
-          .reply({
-            content:
-              "❌ Terjadi kesalahan.",
-            ephemeral: true
-          })
-          .catch(
-            () => {}
-          );
-
+        await interaction.reply({
+          content:
+            "❌ Terjadi kesalahan.",
+          ephemeral: true
+        }).catch(() => {});
       }
-
     }
-
   }
 );
 
-// ========================================
+// =========================
 // MESSAGE CREATE
-// ========================================
+// =========================
 
 client.on(
   "messageCreate",
   async message => {
 
-    if (
-      message.author.bot
-    ) {
-      return;
-    }
+    if (message.author.bot) return;
 
     try {
 
-      // ==================================
       // AUTO RESPONSE
-      // ==================================
-
       await handleAutoResponse(
         message
       );
 
-      // ==================================
-      // MODERATION
-      // ==================================
-
-      await handleModeration(
-        message
-      );
-
-      // ==================================
-      // PINTEREST
-      // ==================================
-
+      // PINTEREST !pin
       await handlePinterest(
         message
       );
 
-      // ==================================
-      // CALCULATOR
-      // ==================================
-
+      // CALCULATOR !calc
       await handleCalculator(
         message
       );
 
-      // ==================================
-      // CURRENCY
-      // ==================================
-
+      // CURRENCY !convert
       await handleCurrency(
         message
       );
 
+      // CEK UANG
       await handleCheckCurrency(
         message
       );
 
-      // ==================================
-      // SFL
-      // ==================================
-
+      // SFL !sfl
       await handleSFL(
         message
       );
 
+      // NOTE:
+      // MODERATION TIDAK ADA DI SINI.
+      // Semua moderation sudah menggunakan /
+      
     } catch (error) {
-
       console.error(
         "❌ Message Error:",
         error
       );
-
     }
-
   }
 );
 
-// ========================================
+// =========================
 // LOGIN
-// ========================================
+// =========================
 
 client.login(
   process.env.DISCORD_TOKEN
