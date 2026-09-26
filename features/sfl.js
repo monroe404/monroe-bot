@@ -97,7 +97,7 @@ function buildResultComponents(
   container.addTextDisplayComponents(
     new TextDisplayBuilder()
       .setContent(
-        "# ⚡ SFL BYPASS"
+        "# ⚡ BYPASS BERHASIL"
       )
   );
 
