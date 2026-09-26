@@ -1,4 +1,5 @@
 const {
+  SlashCommandBuilder,
   PermissionFlagsBits
 } = require("discord.js");
 
@@ -14,172 +15,383 @@ function isStaff(member) {
   );
 }
 
-async function handleModeration(message) {
-  if (message.author.bot) return;
-  if (!message.guild) return;
+// =========================
+// MODERATION COMMANDS
+// =========================
 
-  if (!message.content.startsWith("!")) return;
+const moderationCommands = [
+  new SlashCommandBuilder()
+    .setName("clear")
+    .setDescription("Menghapus pesan di channel.")
+    .addIntegerOption(option =>
+      option
+        .setName("jumlah")
+        .setDescription("Jumlah pesan yang ingin dihapus (1-100).")
+        .setRequired(true)
+        .setMinValue(1)
+        .setMaxValue(100)
+    ),
 
-  const member = message.member;
+  new SlashCommandBuilder()
+    .setName("kickm")
+    .setDescription("Kick member dari server.")
+    .addUserOption(option =>
+      option
+        .setName("member")
+        .setDescription("Member yang ingin di-kick.")
+        .setRequired(true)
+    )
+    .addStringOption(option =>
+      option
+        .setName("alasan")
+        .setDescription("Alasan kick.")
+        .setRequired(false)
+    ),
 
-  if (!isStaff(member)) {
-    return message.reply(
-      "perintah akan segera dilaksanakan."
-    );
+  new SlashCommandBuilder()
+    .setName("banm")
+    .setDescription("Ban member dari server.")
+    .addUserOption(option =>
+      option
+        .setName("member")
+        .setDescription("Member yang ingin di-ban.")
+        .setRequired(true)
+    )
+    .addStringOption(option =>
+      option
+        .setName("alasan")
+        .setDescription("Alasan ban.")
+        .setRequired(false)
+    ),
+
+  new SlashCommandBuilder()
+    .setName("tom")
+    .setDescription("Memberikan timeout kepada member.")
+    .addUserOption(option =>
+      option
+        .setName("member")
+        .setDescription("Member yang ingin di-timeout.")
+        .setRequired(true)
+    )
+    .addStringOption(option =>
+      option
+        .setName("durasi")
+        .setDescription("Contoh: 10s, 10m, 2h, 1d.")
+        .setRequired(true)
+    )
+    .addStringOption(option =>
+      option
+        .setName("alasan")
+        .setDescription("Alasan timeout.")
+        .setRequired(false)
+    ),
+
+  new SlashCommandBuilder()
+    .setName("lockm")
+    .setDescription("Mengunci channel."),
+
+  new SlashCommandBuilder()
+    .setName("unlockm")
+    .setDescription("Membuka kembali channel."),
+
+  new SlashCommandBuilder()
+    .setName("warnm")
+    .setDescription("Memberikan peringatan kepada member.")
+    .addUserOption(option =>
+      option
+        .setName("member")
+        .setDescription("Member yang ingin diberi peringatan.")
+        .setRequired(true)
+    )
+    .addStringOption(option =>
+      option
+        .setName("alasan")
+        .setDescription("Alasan peringatan.")
+        .setRequired(false)
+    ),
+
+  new SlashCommandBuilder()
+    .setName("rolem")
+    .setDescription("Memberikan role kepada member.")
+    .addUserOption(option =>
+      option
+        .setName("member")
+        .setDescription("Member yang ingin diberi role.")
+        .setRequired(true)
+    )
+    .addRoleOption(option =>
+      option
+        .setName("role")
+        .setDescription("Role yang ingin diberikan.")
+        .setRequired(true)
+    )
+].map(command => command.toJSON());
+
+
+// =========================
+// HANDLE MODERATION
+// =========================
+
+async function handleModerationInteraction(interaction) {
+  if (!interaction.isChatInputCommand()) return false;
+
+  const commands = [
+    "clear",
+    "kickm",
+    "banm",
+    "tom",
+    "lockm",
+    "unlockm",
+    "warnm",
+    "rolem"
+  ];
+
+  if (!commands.includes(interaction.commandName)) {
+    return false;
   }
 
-  const args = message.content.trim().split(/\s+/);
-  const command = args[0].toLowerCase();
+  if (!interaction.guild || !interaction.member) {
+    await interaction.reply({
+      content: "❌ Command hanya dapat digunakan di server.",
+      ephemeral: true
+    });
+
+    return true;
+  }
 
   // =========================
-  // !clear
+  // STAFF CHECK
   // =========================
 
-  if (command === "!clear") {
+  if (!isStaff(interaction.member)) {
+    await interaction.reply({
+      content: "perintah akan segera dilaksanakan.",
+      ephemeral: true
+    });
+
+    return true;
+  }
+
+  // =========================
+  // /clear
+  // =========================
+
+  if (interaction.commandName === "clear") {
     if (
-      !member.permissions.has(
+      !interaction.member.permissions.has(
         PermissionFlagsBits.ManageMessages
       )
     ) {
-      return message.reply(
-        "❌ Kamu tidak mempunyai permission **Manage Messages**."
-      );
+      await interaction.reply({
+        content:
+          "❌ Kamu tidak mempunyai permission **Manage Messages**.",
+        ephemeral: true
+      });
+
+      return true;
     }
 
-    const amount = parseInt(args[1]);
+    const amount =
+      interaction.options.getInteger("jumlah");
 
-    if (!amount || amount < 1 || amount > 100) {
-      return message.reply(
-        "❌ Gunakan: `!clear 1-100`"
-      );
+    await interaction.deferReply({
+      ephemeral: true
+    });
+
+    try {
+      const deleted =
+        await interaction.channel.bulkDelete(
+          amount,
+          true
+        );
+
+      await interaction.editReply({
+        content:
+          `🧹 Berhasil menghapus **${deleted.size} pesan**.`
+      });
+    } catch (error) {
+      console.error("❌ Clear Error:", error);
+
+      await interaction.editReply({
+        content:
+          "❌ Gagal menghapus pesan."
+      });
     }
 
-    await message.delete().catch(() => {});
-
-    const deleted = await message.channel.bulkDelete(
-      amount,
-      true
-    );
-
-    const msg = await message.channel.send(
-      `🧹 Berhasil menghapus **${deleted.size} pesan**.`
-    );
-
-    setTimeout(() => {
-      msg.delete().catch(() => {});
-    }, 3000);
-
-    return;
+    return true;
   }
 
   // =========================
-  // !kickm
+  // /kickm
   // =========================
 
-  if (command === "!kickm") {
+  if (interaction.commandName === "kickm") {
     if (
-      !member.permissions.has(
+      !interaction.member.permissions.has(
         PermissionFlagsBits.KickMembers
       )
     ) {
-      return message.reply(
-        "❌ Kamu tidak mempunyai permission **Kick Members**."
-      );
+      await interaction.reply({
+        content:
+          "❌ Kamu tidak mempunyai permission **Kick Members**.",
+        ephemeral: true
+      });
+
+      return true;
     }
 
     const target =
-      message.mentions.members.first();
-
-    if (!target) {
-      return message.reply(
-        "❌ Gunakan: `!kickm @member alasan`"
-      );
-    }
+      interaction.options.getMember("member");
 
     const reason =
-      args.slice(2).join(" ") ||
+      interaction.options.getString("alasan") ||
       "Tidak ada alasan";
 
-    if (!target.kickable) {
-      return message.reply(
-        "❌ Member tersebut tidak bisa di-kick."
-      );
+    if (!target) {
+      await interaction.reply({
+        content:
+          "❌ Member tidak ditemukan.",
+        ephemeral: true
+      });
+
+      return true;
     }
 
-    await target.kick(reason);
+    if (!target.kickable) {
+      await interaction.reply({
+        content:
+          "❌ Member tersebut tidak bisa di-kick.",
+        ephemeral: true
+      });
 
-    return message.reply(
-      `👢 **${target.user.tag}** berhasil di-kick.\nAlasan: ${reason}`
-    );
+      return true;
+    }
+
+    try {
+      await target.kick(reason);
+
+      await interaction.reply({
+        content:
+          `👢 **${target.user.tag}** berhasil di-kick.\nAlasan: ${reason}`
+      });
+    } catch (error) {
+      console.error("❌ Kick Error:", error);
+
+      await interaction.reply({
+        content:
+          "❌ Gagal melakukan kick.",
+        ephemeral: true
+      });
+    }
+
+    return true;
   }
 
   // =========================
-  // !banm
+  // /banm
   // =========================
 
-  if (command === "!banm") {
+  if (interaction.commandName === "banm") {
     if (
-      !member.permissions.has(
+      !interaction.member.permissions.has(
         PermissionFlagsBits.BanMembers
       )
     ) {
-      return message.reply(
-        "❌ Kamu tidak mempunyai permission **Ban Members**."
-      );
+      await interaction.reply({
+        content:
+          "❌ Kamu tidak mempunyai permission **Ban Members**.",
+        ephemeral: true
+      });
+
+      return true;
     }
 
     const target =
-      message.mentions.members.first();
-
-    if (!target) {
-      return message.reply(
-        "❌ Gunakan: `!banm @member alasan`"
-      );
-    }
+      interaction.options.getMember("member");
 
     const reason =
-      args.slice(2).join(" ") ||
+      interaction.options.getString("alasan") ||
       "Tidak ada alasan";
 
-    if (!target.bannable) {
-      return message.reply(
-        "❌ Member tersebut tidak bisa di-ban."
-      );
+    if (!target) {
+      await interaction.reply({
+        content:
+          "❌ Member tidak ditemukan.",
+        ephemeral: true
+      });
+
+      return true;
     }
 
-    await target.ban({
-      reason
-    });
+    if (!target.bannable) {
+      await interaction.reply({
+        content:
+          "❌ Member tersebut tidak bisa di-ban.",
+        ephemeral: true
+      });
 
-    return message.reply(
-      `🔨 **${target.user.tag}** berhasil di-ban.\nAlasan: ${reason}`
-    );
+      return true;
+    }
+
+    try {
+      await target.ban({
+        reason
+      });
+
+      await interaction.reply({
+        content:
+          `🔨 **${target.user.tag}** berhasil di-ban.\nAlasan: ${reason}`
+      });
+    } catch (error) {
+      console.error("❌ Ban Error:", error);
+
+      await interaction.reply({
+        content:
+          "❌ Gagal melakukan ban.",
+        ephemeral: true
+      });
+    }
+
+    return true;
   }
 
   // =========================
-  // !tom
+  // /tom
   // =========================
 
-  if (command === "!tom") {
+  if (interaction.commandName === "tom") {
     if (
-      !member.permissions.has(
+      !interaction.member.permissions.has(
         PermissionFlagsBits.ModerateMembers
       )
     ) {
-      return message.reply(
-        "❌ Kamu tidak mempunyai permission **Moderate Members**."
-      );
+      await interaction.reply({
+        content:
+          "❌ Kamu tidak mempunyai permission **Moderate Members**.",
+        ephemeral: true
+      });
+
+      return true;
     }
 
     const target =
-      message.mentions.members.first();
+      interaction.options.getMember("member");
 
-    const durationText = args[2];
+    const durationText =
+      interaction.options.getString("durasi");
+
+    const reason =
+      interaction.options.getString("alasan") ||
+      "Tidak ada alasan";
 
     if (!target || !durationText) {
-      return message.reply(
-        "❌ Gunakan: `!tom @member 10m alasan`"
-      );
+      await interaction.reply({
+        content:
+          "❌ Member dan durasi wajib diisi.",
+        ephemeral: true
+      });
+
+      return true;
     }
 
     const match =
@@ -188,13 +400,20 @@ async function handleModeration(message) {
       );
 
     if (!match) {
-      return message.reply(
-        "❌ Format waktu: `10s`, `10m`, `2h`, atau `1d`."
-      );
+      await interaction.reply({
+        content:
+          "❌ Format waktu: `10s`, `10m`, `2h`, atau `1d`.",
+        ephemeral: true
+      });
+
+      return true;
     }
 
-    const amount = parseInt(match[1]);
-    const unit = match[2].toLowerCase();
+    const amount =
+      parseInt(match[1]);
+
+    const unit =
+      match[2].toLowerCase();
 
     let duration;
 
@@ -214,119 +433,265 @@ async function handleModeration(message) {
       28 * 24 * 60 * 60 * 1000;
 
     if (duration > maxDuration) {
-      return message.reply(
-        "❌ Maksimal timeout adalah **28 hari**."
-      );
-    }
+      await interaction.reply({
+        content:
+          "❌ Maksimal timeout adalah **28 hari**.",
+        ephemeral: true
+      });
 
-    const reason =
-      args.slice(3).join(" ") ||
-      "Tidak ada alasan";
+      return true;
+    }
 
     if (!target.moderatable) {
-      return message.reply(
-        "❌ Member tersebut tidak bisa di-timeout."
-      );
+      await interaction.reply({
+        content:
+          "❌ Member tersebut tidak bisa di-timeout.",
+        ephemeral: true
+      });
+
+      return true;
     }
 
-    await target.timeout(
-      duration,
-      reason
-    );
+    try {
+      await target.timeout(
+        duration,
+        reason
+      );
 
-    return message.reply(
-      `⏱️ **${target.user.tag}** mendapatkan timeout **${durationText}**.\nAlasan: ${reason}`
-    );
+      await interaction.reply({
+        content:
+          `⏱️ **${target.user.tag}** mendapatkan timeout **${durationText}**.\nAlasan: ${reason}`
+      });
+    } catch (error) {
+      console.error("❌ Timeout Error:", error);
+
+      await interaction.reply({
+        content:
+          "❌ Gagal memberikan timeout.",
+        ephemeral: true
+      });
+    }
+
+    return true;
   }
 
   // =========================
-  // !lockm
+  // /lockm
   // =========================
 
-  if (command === "!lockm") {
+  if (interaction.commandName === "lockm") {
     if (
-      !member.permissions.has(
+      !interaction.member.permissions.has(
         PermissionFlagsBits.ManageChannels
       )
     ) {
-      return message.reply(
-        "❌ Kamu tidak mempunyai permission **Manage Channels**."
-      );
+      await interaction.reply({
+        content:
+          "❌ Kamu tidak mempunyai permission **Manage Channels**.",
+        ephemeral: true
+      });
+
+      return true;
     }
 
-    await message.channel.permissionOverwrites.edit(
-      message.guild.roles.everyone,
-      {
-        SendMessages: false
-      }
-    );
+    try {
+      await interaction.channel.permissionOverwrites.edit(
+        interaction.guild.roles.everyone,
+        {
+          SendMessages: false
+        }
+      );
 
-    return message.reply(
-      "🔒 Channel berhasil di-lock."
-    );
+      await interaction.reply({
+        content:
+          "🔒 Channel berhasil di-lock."
+      });
+    } catch (error) {
+      console.error("❌ Lock Error:", error);
+
+      await interaction.reply({
+        content:
+          "❌ Gagal mengunci channel.",
+        ephemeral: true
+      });
+    }
+
+    return true;
   }
 
   // =========================
-  // !unlockm
+  // /unlockm
   // =========================
 
-  if (command === "!unlockm") {
+  if (interaction.commandName === "unlockm") {
     if (
-      !member.permissions.has(
+      !interaction.member.permissions.has(
         PermissionFlagsBits.ManageChannels
       )
     ) {
-      return message.reply(
-        "❌ Kamu tidak mempunyai permission **Manage Channels**."
-      );
+      await interaction.reply({
+        content:
+          "❌ Kamu tidak mempunyai permission **Manage Channels**.",
+        ephemeral: true
+      });
+
+      return true;
     }
 
-    await message.channel.permissionOverwrites.edit(
-      message.guild.roles.everyone,
-      {
-        SendMessages: null
-      }
-    );
+    try {
+      await interaction.channel.permissionOverwrites.edit(
+        interaction.guild.roles.everyone,
+        {
+          SendMessages: null
+        }
+      );
 
-    return message.reply(
-      "🔓 Channel berhasil di-unlock."
-    );
+      await interaction.reply({
+        content:
+          "🔓 Channel berhasil di-unlock."
+      });
+    } catch (error) {
+      console.error("❌ Unlock Error:", error);
+
+      await interaction.reply({
+        content:
+          "❌ Gagal membuka channel.",
+        ephemeral: true
+      });
+    }
+
+    return true;
   }
 
   // =========================
-  // !warnm
+  // /warnm
   // =========================
 
-  if (command === "!warnm") {
+  if (interaction.commandName === "warnm") {
     if (
-      !member.permissions.has(
+      !interaction.member.permissions.has(
         PermissionFlagsBits.ModerateMembers
       )
     ) {
-      return message.reply(
-        "❌ Kamu tidak mempunyai permission **Moderate Members**."
-      );
+      await interaction.reply({
+        content:
+          "❌ Kamu tidak mempunyai permission **Moderate Members**.",
+        ephemeral: true
+      });
+
+      return true;
     }
 
     const target =
-      message.mentions.members.first();
-
-    if (!target) {
-      return message.reply(
-        "❌ Gunakan: `!warnm @member alasan`"
-      );
-    }
+      interaction.options.getMember("member");
 
     const reason =
-      args.slice(2).join(" ") ||
+      interaction.options.getString("alasan") ||
       "Tidak ada alasan";
 
-    return message.reply(
-      `⚠️ **${target.user.tag}** mendapatkan peringatan.\nAlasan: ${reason}`
-    );
+    if (!target) {
+      await interaction.reply({
+        content:
+          "❌ Member tidak ditemukan.",
+        ephemeral: true
+      });
+
+      return true;
+    }
+
+    await interaction.reply({
+      content:
+        `⚠️ **${target.user.tag}** mendapatkan peringatan.\nAlasan: ${reason}`
+    });
+
+    return true;
   }
+
+  // =========================
+  // /rolem
+  // =========================
+
+  if (interaction.commandName === "rolem") {
+    if (
+      !interaction.member.permissions.has(
+        PermissionFlagsBits.ManageRoles
+      )
+    ) {
+      await interaction.reply({
+        content:
+          "❌ Kamu tidak mempunyai permission **Manage Roles**.",
+        ephemeral: true
+      });
+
+      return true;
+    }
+
+    const target =
+      interaction.options.getMember("member");
+
+    const role =
+      interaction.options.getRole("role");
+
+    if (!target || !role) {
+      await interaction.reply({
+        content:
+          "❌ Member atau role tidak ditemukan.",
+        ephemeral: true
+      });
+
+      return true;
+    }
+
+    if (role.managed) {
+      await interaction.reply({
+        content:
+          "❌ Role tersebut dikelola oleh integrasi dan tidak dapat diberikan.",
+        ephemeral: true
+      });
+
+      return true;
+    }
+
+    const botMember =
+      interaction.guild.members.me;
+
+    if (
+      role.position >=
+      botMember.roles.highest.position
+    ) {
+      await interaction.reply({
+        content:
+          "❌ Role tersebut berada di atas atau sama dengan role bot.",
+        ephemeral: true
+      });
+
+      return true;
+    }
+
+    try {
+      await target.roles.add(role);
+
+      await interaction.reply({
+        content:
+          `✅ Role **${role.name}** berhasil diberikan kepada **${target.user.tag}**.`
+      });
+    } catch (error) {
+      console.error("❌ Role Error:", error);
+
+      await interaction.reply({
+        content:
+          "❌ Gagal memberikan role.",
+        ephemeral: true
+      });
+    }
+
+    return true;
+  }
+
+  return true;
 }
 
 module.exports = {
-  handleModeration
+  moderationCommands,
+  handleModerationInteraction
 };
