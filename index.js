@@ -9,9 +9,9 @@ const {
   GUILD_ID
 } = require("./config");
 
-// =========================
+// ========================================
 // FEATURES
-// =========================
+// ========================================
 
 const {
   roleCommand,
@@ -63,15 +63,15 @@ const {
   handleFreeRoleInteraction
 } = require("./features/freeRole");
 
-// =========================
+// ========================================
 // AI BOT
-// =========================
+// ========================================
 
 require("./features/aiBot");
 
-// =========================
+// ========================================
 // EXPRESS
-// =========================
+// ========================================
 
 const app = express();
 
@@ -84,13 +84,14 @@ app.get("/", (req, res) => {
 
 app.listen(PORT, () => {
   console.log(
-    "🌐 Web server berjalan di port " + PORT
+    "🌐 Web server berjalan di port " +
+      PORT
   );
 });
 
-// =========================
+// ========================================
 // DISCORD CLIENT
-// =========================
+// ========================================
 
 const client = new Client({
   intents: [
@@ -101,9 +102,9 @@ const client = new Client({
   ]
 });
 
-// =========================
+// ========================================
 // READY
-// =========================
+// ========================================
 
 client.once("ready", async () => {
   console.log("================================");
@@ -113,22 +114,17 @@ client.once("ready", async () => {
   );
   console.log("================================");
 
+  // ======================================
+  // REGISTER SLASH COMMAND
+  // ======================================
+
   try {
     await client.application.commands.set(
       [
-        // ROLE
         roleCommand.toJSON(),
-
-        // CATALOG
         catalogCommand.toJSON(),
-
-        // SLOT
         setSlotCommand.toJSON(),
-
-        // FREE ROLE
         freeRoleCommand.toJSON(),
-
-        // MODERATION
         ...moderationCommands
       ],
       GUILD_ID
@@ -137,6 +133,7 @@ client.once("ready", async () => {
     console.log(
       "✅ Slash command berhasil didaftarkan."
     );
+
   } catch (error) {
     console.error(
       "❌ Gagal mendaftarkan slash command:",
@@ -144,8 +141,13 @@ client.once("ready", async () => {
     );
   }
 
+  // ======================================
+  // TICKET PANEL
+  // ======================================
+
   try {
     await sendTicketPanel(client);
+
   } catch (error) {
     console.error(
       "❌ Gagal mengirim Ticket Panel:",
@@ -154,54 +156,57 @@ client.once("ready", async () => {
   }
 });
 
-// =========================
+// ========================================
 // INTERACTION CREATE
-// =========================
+// ========================================
 
 client.on(
   "interactionCreate",
   async interaction => {
+
     try {
 
-      // =========================
-      // MODERATION
-      // /clear
-      // /kickm
-      // /banm
-      // /tom
-      // /lockm
-      // /unlockm
-      // /warnm
-      // /rolem
-      // =========================
+      // ====================================
+      // MODERATION SLASH COMMAND
+      // ====================================
 
-      if (interaction.isChatInputCommand()) {
+      if (
+        interaction.isChatInputCommand()
+      ) {
+
         const handled =
           await handleModerationInteraction(
             interaction
           );
 
-        if (handled) return;
+        if (handled) {
+          return;
+        }
       }
 
-      // =========================
-      // FREE ROLE BUTTON
-      // =========================
+      // ====================================
+      // FREE ROLE
+      // BUTTON + SELECT MENU
+      // ====================================
 
       if (
-        interaction.isButton() &&
+        (
+          interaction.isButton() ||
+          interaction.isStringSelectMenu()
+        ) &&
         interaction.customId.startsWith(
           "free_role_"
         )
       ) {
+
         return await handleFreeRoleInteraction(
           interaction
         );
       }
 
-      // =========================
+      // ====================================
       // CATALOG BUTTON
-      // =========================
+      // ====================================
 
       if (
         interaction.isButton() &&
@@ -209,80 +214,95 @@ client.on(
           "catalog_"
         )
       ) {
+
         return await handleCatalogInteraction(
           interaction
         );
       }
 
-      // =========================
+      // ====================================
       // SLASH COMMAND
-      // =========================
+      // ====================================
 
-      if (interaction.isChatInputCommand()) {
+      if (
+        interaction.isChatInputCommand()
+      ) {
 
-        // /setup-free-role
+        // -------------------------------
+        // SETUP FREE ROLE
+        // -------------------------------
+
         if (
-  (
-    interaction.isButton() ||
-    interaction.isStringSelectMenu()
-  ) &&
-  interaction.customId.startsWith(
-    "free_role_"
-  )
-) {
-  return await handleFreeRoleInteraction(
-    interaction
-  );
-}
+          interaction.commandName ===
+          "setup-free-role"
+        ) {
 
-        // /setup-catalog
+          return await handleFreeRoleCommand(
+            interaction
+          );
+        }
+
+        // -------------------------------
+        // SETUP CATALOG
+        // -------------------------------
+
         if (
           interaction.commandName ===
           "setup-catalog"
         ) {
+
           return await handleCatalogCommand(
             interaction
           );
         }
 
-        // /setup-role
+        // -------------------------------
+        // SETUP ROLE
+        // -------------------------------
+
         if (
           interaction.commandName ===
           "setup-role"
         ) {
+
           return await handleRoleFeature(
             interaction
           );
         }
 
-        // /setslot
+        // -------------------------------
+        // SET SLOT
+        // -------------------------------
+
         if (
           interaction.commandName ===
           "setslot"
         ) {
+
           return await handleSetSlot(
             interaction
           );
         }
       }
 
-      // =========================
+      // ====================================
       // ROLE FEATURE
-      // =========================
+      // ====================================
 
       await handleRoleFeature(
         interaction
       );
 
-      // =========================
+      // ====================================
       // TICKET FEATURE
-      // =========================
+      // ====================================
 
       await handleTicketFeature(
         interaction
       );
 
     } catch (error) {
+
       console.error(
         "❌ Interaction Error:",
         error
@@ -292,6 +312,7 @@ client.on(
         !interaction.replied &&
         !interaction.deferred
       ) {
+
         await interaction.reply({
           content:
             "❌ Terjadi kesalahan.",
@@ -302,81 +323,74 @@ client.on(
   }
 );
 
-// =========================
+// ========================================
 // MESSAGE CREATE
-// =========================
+// ========================================
 
 client.on(
   "messageCreate",
   async message => {
 
-    // Abaikan pesan bot
-    if (message.author.bot) return;
+    // Jangan proses pesan bot
+    if (message.author.bot) {
+      return;
+    }
 
     try {
 
-      // =========================
+      // ==================================
       // AUTO RESPONSE
-      // =========================
+      // ==================================
 
       await handleAutoResponse(
         message
       );
 
-      // =========================
+      // ==================================
       // PINTEREST
-      // !pin
-      // =========================
+      // ==================================
 
       await handlePinterest(
         message
       );
 
-      // =========================
+      // ==================================
       // CALCULATOR
       // !calc
-      // =========================
+      // ==================================
 
       await handleCalculator(
         message
       );
 
-      // =========================
+      // ==================================
       // CURRENCY
       // !convert
-      // =========================
+      // ==================================
 
       await handleCurrency(
         message
       );
 
-      // =========================
-      // CEK UANG
-      // =========================
+      // ==================================
+      // CHECK CURRENCY
+      // !cekuang
+      // ==================================
 
       await handleCheckCurrency(
         message
       );
 
-      // =========================
-      // AUTO SKIPLINK
-      // HANYA CHANNEL
-      // 1551955190687731732
-      // =========================
+      // ==================================
+      // SFL AUTO SKIPLINK
+      // ==================================
 
       await handleSFL(
         message
       );
 
-      // =========================
-      // JANGAN TAMBAHKAN
-      // handleModeration(message)
-      // DI SINI.
-      //
-      // MODERATOR SUDAH SLASH COMMAND.
-      // =========================
-
     } catch (error) {
+
       console.error(
         "❌ Message Error:",
         error
@@ -385,9 +399,9 @@ client.on(
   }
 );
 
-// =========================
+// ========================================
 // LOGIN
-// =========================
+// ========================================
 
 client.login(
   process.env.DISCORD_TOKEN
