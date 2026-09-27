@@ -222,13 +222,18 @@ client.on(
 
         // /setup-free-role
         if (
-          interaction.commandName ===
-          "setup-free-role"
-        ) {
-          return await handleFreeRoleCommand(
-            interaction
-          );
-        }
+  (
+    interaction.isButton() ||
+    interaction.isStringSelectMenu()
+  ) &&
+  interaction.customId.startsWith(
+    "free_role_"
+  )
+) {
+  return await handleFreeRoleInteraction(
+    interaction
+  );
+}
 
         // /setup-catalog
         if (
