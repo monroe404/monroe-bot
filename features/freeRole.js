@@ -3,7 +3,8 @@ const {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
-  EmbedBuilder
+  EmbedBuilder,
+  StringSelectMenuBuilder
 } = require("discord.js");
 
 // ========================================
@@ -13,31 +14,110 @@ const {
 const FREE_ROLE_CHANNEL_ID =
   "1550719481628856340";
 
-const FREE_ROLES = [
+// ========================================
+// SERVER ROLE
+// ========================================
+
+const SERVER_ROLES = [
   {
     id: "1553280859434651761",
     name: "State Side #SSRP!!",
-    emoji: "🎮",
-    buttonId: "free_role_ssrp"
+    emoji: "🎮"
   },
   {
     id: "1553280978573856778",
     name: "Crystal Pride #CPRP!!",
-    emoji: "💎",
-    buttonId: "free_role_cprp"
+    emoji: "💎"
   },
   {
     id: "1553281129044385843",
     name: "JogjaGamers #JGRP!!",
-    emoji: "🌆",
-    buttonId: "free_role_jgrp"
+    emoji: "🌆"
   },
   {
     id: "1553281313665060904",
     name: "Lunar Pride #LPRP!!",
-    emoji: "🌙",
-    buttonId: "free_role_lprp"
+    emoji: "🌙"
+  },
+  {
+    id: "1553442208185843744",
+    name: "Grand Country #GCRP!!",
+    emoji: "🏙️"
+  },
+  {
+    id: "1553575984932978762",
+    name: "Valiant #VRP!!",
+    emoji: "🛡️"
   }
+];
+
+// ========================================
+// GAME PLAYING
+// ========================================
+
+const GAME_ROLES = [
+  {
+    id: "1553442336774693024",
+    name: "Roblox Player",
+    emoji: "🎮"
+  },
+  {
+    id: "1553442538013065296",
+    name: "Minecraft Player",
+    emoji: "⛏️"
+  },
+  {
+    id: "1553580616392384643",
+    name: "Free Fire Player",
+    emoji: "🔥"
+  }
+];
+
+// ========================================
+// IC ROLE
+// ========================================
+
+const IC_ROLES = [
+  {
+    id: "1553581299963273236",
+    name: "Police Department",
+    emoji: "👮"
+  },
+  {
+    id: "1553581412588855356",
+    name: "Fire Department",
+    emoji: "🚒"
+  },
+  {
+    id: "1553581515630186556",
+    name: "Government State",
+    emoji: "🏛️"
+  },
+  {
+    id: "1553581641178284074",
+    name: "News Agency",
+    emoji: "📰"
+  },
+  {
+    id: "1553582104653340692",
+    name: "Families And Gangs",
+    emoji: "🔫"
+  },
+  {
+    id: "1553442735107870750",
+    name: "Robbery",
+    emoji: "💰"
+  }
+];
+
+// ========================================
+// ALL ROLES
+// ========================================
+
+const ALL_ROLES = [
+  ...SERVER_ROLES,
+  ...GAME_ROLES,
+  ...IC_ROLES
 ];
 
 // ========================================
@@ -52,12 +132,10 @@ const freeRoleCommand =
     );
 
 // ========================================
-// SEND PANEL
+// SEND MAIN PANEL
 // ========================================
 
-async function sendFreeRolePanel(
-  client
-) {
+async function sendFreeRolePanel(client) {
   try {
     const channel =
       await client.channels.fetch(
@@ -74,12 +152,19 @@ async function sendFreeRolePanel(
     const embed =
       new EmbedBuilder()
         .setColor(0xFF7A00)
-        .setTitle(
-          "FREE ROLE"
-        )
+        .setTitle("FREE ROLE")
         .setDescription(
           [
-            "Kalian main di server apa guys?."
+            "Pilih kategori role yang ingin kamu ambil.",
+            "",
+            "🎭 **SERVER ROLE**",
+            "Pilih role server yang kamu mainkan.",
+            "",
+            "🎮 **GAME PLAYING**",
+            "Pilih game yang sedang kamu mainkan.",
+            "",
+            "🪪 **IC ROLE**",
+            "Pilih role IC kamu."
           ].join("\n")
         )
         .setFooter({
@@ -88,25 +173,38 @@ async function sendFreeRolePanel(
         });
 
     const row =
-      new ActionRowBuilder();
+      new ActionRowBuilder()
+        .addComponents(
+          new ButtonBuilder()
+            .setCustomId(
+              "free_role_category_server"
+            )
+            .setLabel("SERVER ROLE")
+            .setEmoji("🎭")
+            .setStyle(
+              ButtonStyle.Secondary
+            ),
 
-    for (const role of FREE_ROLES) {
-      row.addComponents(
-        new ButtonBuilder()
-          .setCustomId(
-            role.buttonId
-          )
-          .setLabel(
-            role.name
-          )
-          .setEmoji(
-            role.emoji
-          )
-          .setStyle(
-            ButtonStyle.Secondary
-          )
-      );
-    }
+          new ButtonBuilder()
+            .setCustomId(
+              "free_role_category_game"
+            )
+            .setLabel("GAME PLAYING")
+            .setEmoji("🎮")
+            .setStyle(
+              ButtonStyle.Secondary
+            ),
+
+          new ButtonBuilder()
+            .setCustomId(
+              "free_role_category_ic"
+            )
+            .setLabel("IC ROLE")
+            .setEmoji("🪪")
+            .setStyle(
+              ButtonStyle.Secondary
+            )
+        );
 
     await channel.send({
       embeds: [embed],
@@ -136,7 +234,7 @@ async function handleFreeRoleCommand(
     interaction.commandName !==
     "setup-free-role"
   ) {
-    return;
+    return false;
   }
 
   await interaction.deferReply({
@@ -151,67 +249,256 @@ async function handleFreeRoleCommand(
     content:
       "✅ Panel Free Role berhasil dikirim."
   });
+
+  return true;
 }
 
 // ========================================
-// HANDLE BUTTON
+// CREATE SELECT MENU
+// ========================================
+
+function createRoleSelect(
+  category,
+  roles
+) {
+  const select =
+    new StringSelectMenuBuilder()
+      .setCustomId(
+        `free_role_select_${category}`
+      )
+      .setPlaceholder(
+        "👇 Pilih role kamu di sini"
+      )
+      .setMinValues(1)
+      .setMaxValues(1)
+      .addOptions(
+        roles.map(role => ({
+          label: role.name,
+          value: role.id,
+          emoji: role.emoji
+        }))
+      );
+
+  return new ActionRowBuilder()
+    .addComponents(select);
+}
+
+// ========================================
+// HANDLE INTERACTION
 // ========================================
 
 async function handleFreeRoleInteraction(
   interaction
 ) {
-  if (!interaction.isButton()) {
-    return false;
-  }
 
-  const role =
-    FREE_ROLES.find(
-      item =>
-        item.buttonId ===
-        interaction.customId
-    );
+  // ======================================
+  // CATEGORY BUTTON
+  // ======================================
 
-  if (!role) {
-    return false;
-  }
+  if (interaction.isButton()) {
 
-  try {
-    const member =
-      interaction.member;
-
-    if (!member) {
-      await interaction.reply({
-        content:
-          "❌ Data member tidak ditemukan.",
-        ephemeral: true
-      });
-
-      return true;
-    }
-
-    // ====================================
-    // CHECK ROLE
-    // ====================================
+    let category = null;
+    let roles = null;
+    let title = "";
 
     if (
-      member.roles.cache.has(
-        role.id
+      interaction.customId ===
+      "free_role_category_server"
+    ) {
+      category = "server";
+      roles = SERVER_ROLES;
+      title = "🎭 SERVER ROLE";
+    }
+
+    if (
+      interaction.customId ===
+      "free_role_category_game"
+    ) {
+      category = "game";
+      roles = GAME_ROLES;
+      title = "🎮 GAME PLAYING";
+    }
+
+    if (
+      interaction.customId ===
+      "free_role_category_ic"
+    ) {
+      category = "ic";
+      roles = IC_ROLES;
+      title = "🪪 IC ROLE";
+    }
+
+    if (!category) {
+      return false;
+    }
+
+    const embed =
+      new EmbedBuilder()
+        .setColor(0xFF7A00)
+        .setTitle(title)
+        .setDescription(
+          "👇 Pilih role yang ingin kamu ambil di bawah."
+        )
+        .setFooter({
+          text:
+            "MONROE COMMUNITY © 2026"
+        });
+
+    await interaction.reply({
+      embeds: [embed],
+      components: [
+        createRoleSelect(
+          category,
+          roles
+        )
+      ],
+      ephemeral: true
+    });
+
+    return true;
+  }
+
+  // ======================================
+  // SELECT MENU
+  // ======================================
+
+  if (
+    interaction.isStringSelectMenu()
+  ) {
+
+    if (
+      !interaction.customId.startsWith(
+        "free_role_select_"
       )
     ) {
+      return false;
+    }
+
+    const roleId =
+      interaction.values[0];
+
+    const role =
+      ALL_ROLES.find(
+        item =>
+          item.id === roleId
+      );
+
+    if (!role) {
       await interaction.reply({
         content:
-          `⚠️ Kamu sudah memiliki role **${role.name}**.`,
+          "❌ Role tidak ditemukan.",
         ephemeral: true
       });
 
       return true;
     }
 
-    // ====================================
-    // FETCH ROLE
-    // ====================================
+    try {
+      const member =
+        interaction.member;
 
-    const guildRole =
+      if (!member) {
+        await interaction.reply({
+          content:
+            "❌ Data member tidak ditemukan.",
+          ephemeral: true
+        });
+
+        return true;
+      }
+
+      // ==================================
+      // CHECK ROLE
+      // ==================================
+
+      if (
+        member.roles.cache.has(
+          role.id
+        )
+      ) {
+        await interaction.reply({
+          content:
+            `⚠️ Kamu sudah memiliki role **${role.name}**.`,
+          ephemeral: true
+        });
+
+        return true;
+      }
+
+      // ==================================
+      // FETCH ROLE
+      // ==================================
+
+      const guildRole =
+        await interaction.guild.roles.fetch(
+          role.id
+        );
+
+      if (!guildRole) {
+        await interaction.reply({
+          content:
+            "❌ Role tidak ditemukan di server.",
+          ephemeral: true
+        });
+
+        return true;
+      }
+
+      // ==================================
+      // GIVE ROLE
+      // ==================================
+
+      await member.roles.add(
+        guildRole
+      );
+
+      await interaction.reply({
+        content:
+          `✅ Berhasil mendapatkan role **${role.name}**!`,
+        ephemeral: true
+      });
+
+      console.log(
+        `🎁 ${interaction.user.tag} mendapatkan role ${role.name}`
+      );
+
+      return true;
+
+    } catch (error) {
+
+      console.error(
+        "❌ Free Role Error:",
+        error
+      );
+
+      if (
+        !interaction.replied &&
+        !interaction.deferred
+      ) {
+        await interaction.reply({
+          content:
+            "❌ Gagal memberikan role. Pastikan posisi role bot lebih tinggi dari role tersebut.",
+          ephemeral: true
+        });
+      }
+
+      return true;
+    }
+  }
+
+  return false;
+}
+
+// ========================================
+// EXPORT
+// ========================================
+
+module.exports = {
+  freeRoleCommand,
+  sendFreeRolePanel,
+  handleFreeRoleCommand,
+  handleFreeRoleInteraction
+};e =
       await interaction.guild.roles.fetch(
         role.id
       );
