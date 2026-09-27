@@ -132,7 +132,7 @@ const freeRoleCommand =
     );
 
 // ========================================
-// SEND MAIN PANEL
+// SEND PANEL
 // ========================================
 
 async function sendFreeRolePanel(client) {
@@ -154,18 +154,7 @@ async function sendFreeRolePanel(client) {
         .setColor(0xFF7A00)
         .setTitle("FREE ROLE")
         .setDescription(
-          [
-            "Pilih kategori role yang ingin kamu ambil.",
-            "",
-            "🎭 **SERVER ROLE**",
-            "Pilih role server yang kamu mainkan.",
-            "",
-            "🎮 **GAME PLAYING**",
-            "Pilih game yang sedang kamu mainkan.",
-            "",
-            "🪪 **IC ROLE**",
-            "Pilih role IC kamu."
-          ].join("\n")
+          "Pilih kategori role yang ingin kamu ambil."
         )
         .setFooter({
           text:
@@ -254,14 +243,14 @@ async function handleFreeRoleCommand(
 }
 
 // ========================================
-// CREATE SELECT MENU
+// SELECT MENU
 // ========================================
 
 function createRoleSelect(
   category,
   roles
 ) {
-  const select =
+  const menu =
     new StringSelectMenuBuilder()
       .setCustomId(
         `free_role_select_${category}`
@@ -269,8 +258,6 @@ function createRoleSelect(
       .setPlaceholder(
         "👇 Pilih role kamu di sini"
       )
-      .setMinValues(1)
-      .setMaxValues(1)
       .addOptions(
         roles.map(role => ({
           label: role.name,
@@ -280,7 +267,7 @@ function createRoleSelect(
       );
 
   return new ActionRowBuilder()
-    .addComponents(select);
+    .addComponents(menu);
 }
 
 // ========================================
@@ -297,38 +284,38 @@ async function handleFreeRoleInteraction(
 
   if (interaction.isButton()) {
 
-    let category = null;
-    let roles = null;
-    let title = "";
+    let roles;
+    let category;
+    let title;
 
     if (
       interaction.customId ===
       "free_role_category_server"
     ) {
-      category = "server";
       roles = SERVER_ROLES;
+      category = "server";
       title = "🎭 SERVER ROLE";
     }
 
-    if (
+    else if (
       interaction.customId ===
       "free_role_category_game"
     ) {
-      category = "game";
       roles = GAME_ROLES;
+      category = "game";
       title = "🎮 GAME PLAYING";
     }
 
-    if (
+    else if (
       interaction.customId ===
       "free_role_category_ic"
     ) {
-      category = "ic";
       roles = IC_ROLES;
+      category = "ic";
       title = "🪪 IC ROLE";
     }
 
-    if (!category) {
+    else {
       return false;
     }
 
@@ -337,7 +324,7 @@ async function handleFreeRoleInteraction(
         .setColor(0xFF7A00)
         .setTitle(title)
         .setDescription(
-          "👇 Pilih role yang ingin kamu ambil di bawah."
+          "👇 Silakan pilih role yang kamu inginkan:"
         )
         .setFooter({
           text:
@@ -379,8 +366,7 @@ async function handleFreeRoleInteraction(
 
     const role =
       ALL_ROLES.find(
-        item =>
-          item.id === roleId
+        item => item.id === roleId
       );
 
     if (!role) {
@@ -394,6 +380,7 @@ async function handleFreeRoleInteraction(
     }
 
     try {
+
       const member =
         interaction.member;
 
@@ -407,9 +394,7 @@ async function handleFreeRoleInteraction(
         return true;
       }
 
-      // ==================================
       // CHECK ROLE
-      // ==================================
 
       if (
         member.roles.cache.has(
@@ -425,9 +410,7 @@ async function handleFreeRoleInteraction(
         return true;
       }
 
-      // ==================================
       // FETCH ROLE
-      // ==================================
 
       const guildRole =
         await interaction.guild.roles.fetch(
@@ -444,9 +427,7 @@ async function handleFreeRoleInteraction(
         return true;
       }
 
-      // ==================================
       // GIVE ROLE
-      // ==================================
 
       await member.roles.add(
         guildRole
@@ -487,71 +468,6 @@ async function handleFreeRoleInteraction(
   }
 
   return false;
-}
-
-// ========================================
-// EXPORT
-// ========================================
-
-module.exports = {
-  freeRoleCommand,
-  sendFreeRolePanel,
-  handleFreeRoleCommand,
-  handleFreeRoleInteraction
-};e =
-      await interaction.guild.roles.fetch(
-        role.id
-      );
-
-    if (!guildRole) {
-      await interaction.reply({
-        content:
-          "❌ Role tidak ditemukan.",
-        ephemeral: true
-      });
-
-      return true;
-    }
-
-    // ====================================
-    // ADD ROLE
-    // ====================================
-
-    await member.roles.add(
-      guildRole
-    );
-
-    await interaction.reply({
-      content:
-        `✅ Berhasil mendapatkan role **${role.name}**!`,
-      ephemeral: true
-    });
-
-    console.log(
-      `🎁 ${interaction.user.tag} mendapatkan role ${role.name}`
-    );
-
-    return true;
-
-  } catch (error) {
-    console.error(
-      "❌ Free Role Error:",
-      error
-    );
-
-    if (
-      !interaction.replied &&
-      !interaction.deferred
-    ) {
-      await interaction.reply({
-        content:
-          "❌ Gagal memberikan role. Pastikan posisi role bot lebih tinggi dari role tersebut.",
-        ephemeral: true
-      });
-    }
-
-    return true;
-  }
 }
 
 // ========================================
