@@ -39,9 +39,12 @@ const {
 const {
   catalogCommand,
   setSlotCommand,
+  addSlotCommand,
   handleCatalogCommand,
   handleCatalogInteraction,
-  handleSetSlot
+  handleSetSlot,
+  handleAddSlot,
+  handleCatalogAutocomplete
 } = require("./features/catalog");
 
 const {
@@ -108,10 +111,12 @@ const client = new Client({
 
 client.once("ready", async () => {
   console.log("================================");
+
   console.log(
     "🤖 Bot login sebagai " +
       client.user.tag
   );
+
   console.log("================================");
 
   // ======================================
@@ -119,12 +124,19 @@ client.once("ready", async () => {
   // ======================================
 
   try {
+
     await client.application.commands.set(
       [
         roleCommand.toJSON(),
+
         catalogCommand.toJSON(),
+
         setSlotCommand.toJSON(),
+
+        addSlotCommand.toJSON(),
+
         freeRoleCommand.toJSON(),
+
         ...moderationCommands
       ],
       GUILD_ID
@@ -135,10 +147,12 @@ client.once("ready", async () => {
     );
 
   } catch (error) {
+
     console.error(
       "❌ Gagal mendaftarkan slash command:",
       error
     );
+
   }
 
   // ======================================
@@ -146,13 +160,16 @@ client.once("ready", async () => {
   // ======================================
 
   try {
+
     await sendTicketPanel(client);
 
   } catch (error) {
+
     console.error(
       "❌ Gagal mengirim Ticket Panel:",
       error
     );
+
   }
 });
 
@@ -165,6 +182,20 @@ client.on(
   async interaction => {
 
     try {
+
+      // ====================================
+      // CATALOG AUTOCOMPLETE
+      // ====================================
+
+      if (
+        interaction.isAutocomplete()
+      ) {
+
+        return await handleCatalogAutocomplete(
+          interaction
+        );
+
+      }
 
       // ====================================
       // MODERATION SLASH COMMAND
@@ -182,6 +213,7 @@ client.on(
         if (handled) {
           return;
         }
+
       }
 
       // ====================================
@@ -202,6 +234,7 @@ client.on(
         return await handleFreeRoleInteraction(
           interaction
         );
+
       }
 
       // ====================================
@@ -218,6 +251,7 @@ client.on(
         return await handleCatalogInteraction(
           interaction
         );
+
       }
 
       // ====================================
@@ -240,6 +274,7 @@ client.on(
           return await handleFreeRoleCommand(
             interaction
           );
+
         }
 
         // -------------------------------
@@ -254,6 +289,7 @@ client.on(
           return await handleCatalogCommand(
             interaction
           );
+
         }
 
         // -------------------------------
@@ -268,6 +304,7 @@ client.on(
           return await handleRoleFeature(
             interaction
           );
+
         }
 
         // -------------------------------
@@ -282,7 +319,24 @@ client.on(
           return await handleSetSlot(
             interaction
           );
+
         }
+
+        // -------------------------------
+        // ADD SLOT
+        // -------------------------------
+
+        if (
+          interaction.commandName ===
+          "addslot"
+        ) {
+
+          return await handleAddSlot(
+            interaction
+          );
+
+        }
+
       }
 
       // ====================================
@@ -318,8 +372,11 @@ client.on(
             "❌ Terjadi kesalahan.",
           ephemeral: true
         }).catch(() => {});
+
       }
+
     }
+
   }
 );
 
@@ -395,7 +452,9 @@ client.on(
         "❌ Message Error:",
         error
       );
+
     }
+
   }
 );
 
