@@ -1,805 +1,854 @@
-const fs = require("fs");
-const path = require("path");
-
 const {
   SlashCommandBuilder,
-  PermissionFlagsBits,
-  ContainerBuilder,
-  TextDisplayBuilder,
-  SeparatorBuilder,
   ActionRowBuilder,
+  StringSelectMenuBuilder,
   ButtonBuilder,
   ButtonStyle,
-  MessageFlags,
-  ChannelType,
   EmbedBuilder
 } = require("discord.js");
 
 const {
+  GUILD_ID,
   STAFF_ROLE_ID,
-  FOUNDER_ROLE_ID,
-  ORDER_CATEGORY_NAME
+  FOUNDER_ROLE_ID
 } = require("../config");
 
-// =====================================
-// DATA SLOT
-// =====================================
+// ===============================
+// EMOJI
+// ===============================
 
-const DATA_DIR = path.join(__dirname, "../data");
-const DATA_FILE = path.join(
-  DATA_DIR,
-  "catalog-slots.json"
-);
+const EMOJI = {
+  discord: "<:discord:1524631979323162634>",
+  money: "<a:MoneyWing:1505699929094492251>",
+  thunder: "<a:bluethunder:1486764903594332311>"
+};
 
-if (!fs.existsSync(DATA_DIR)) {
-  fs.mkdirSync(DATA_DIR, {
-    recursive: true
-  });
-}
+// ===============================
+// CATALOG CHANNELS
+// ===============================
 
-function loadSlots() {
-  try {
-    if (!fs.existsSync(DATA_FILE)) {
-      return {};
-    }
+const CATALOG_CHANNELS = {
+  build_discord: "1546029241441849474",
+  setup_bot: "1553594084449452052",
+  build_modpack: "1553594165541994497",
+  design: "1553594223993823323",
+  rekber: "1553594287541977191"
+};
 
-    return JSON.parse(
-      fs.readFileSync(
-        DATA_FILE,
-        "utf8"
-      )
-    );
-  } catch {
-    return {};
-  }
-}
+// ===============================
+// PRODUCTS
+// ===============================
 
-function saveSlots(data) {
-  fs.writeFileSync(
-    DATA_FILE,
-    JSON.stringify(
-      data,
-      null,
-      2
-    )
-  );
-}
+const PRODUCTS = {
 
-let slots = loadSlots();
+  // =============================
+  // BUILD DISCORD
+  // =============================
 
-function cleanExpiredSlots() {
-  const now = Date.now();
-  let changed = false;
+  community_1: {
+    id: "community_1",
+    category: "build_discord",
+    name: "COMMUNITY PACKET 1",
+    title: "BUILD DISCORD — COMMUNITY",
+    price: 8000,
+    slot: 4,
 
-  for (const key of Object.keys(slots)) {
-    if (
-      slots[key].expiresAt &&
-      now >= slots[key].expiresAt
-    ) {
-      delete slots[key];
-      changed = true;
-    }
-  }
+    include: [
+      "Server Settings",
+      "Server Permission",
+      "Role Management",
+      "Category & Channel Setup",
+      "2× Revisi sebelum pesanan mencapai 24 jam",
+      "Tidak termasuk konfigurasi bot"
+    ],
 
-  if (changed) {
-    saveSlots(slots);
-  }
-}
-
-function getSlot(key) {
-  cleanExpiredSlots();
-
-  return slots[key]?.amount ?? 0;
-}
-
-function setSlot(key, amount) {
-  slots[key] = {
-    amount,
-    expiresAt:
-      Date.now() +
-      7 * 24 * 60 * 60 * 1000
-  };
-
-  saveSlots(slots);
-}
-
-// =====================================
-// PRODUCT DATA
-// =====================================
-
-const products = {
-
-  design: {
-    name: "🎨 Jasa Design",
-
-    description:
-      "Jasa pembuatan poster custom sesuai konsep dan kebutuhan.",
-
-    packages: {
-
-      poster: {
-        name: "Poster Design",
-        price: "7.000 IDR",
-
-        include: [
-          "1 desain poster custom",
-          "Menyesuaikan konsep/request",
-          "Revisi sesuai kesepakatan"
-        ]
-      }
-
-    }
+    benefit: [
+      "Struktur server lebih terorganisir",
+      "Pengaturan permission yang lebih terkontrol",
+      "Sistem role yang tertata sesuai kebutuhan",
+      "Category dan channel disusun secara sistematis",
+      "Memberikan tampilan server yang lebih profesional"
+    ]
   },
 
-  build_community: {
+  community_2: {
+    id: "community_2",
+    category: "build_discord",
+    name: "COMMUNITY PACKET 2",
+    title: "BUILD DISCORD — COMMUNITY",
+    price: 12000,
+    slot: 4,
 
-    name:
-      "🏢 Community Server",
+    include: [
+      "Channel Setup",
+      "Server Settings",
+      "Permission Management",
+      "Role Management",
+      "Server Bot",
+      "Moderator Bot",
+      "Take Role",
+      "Request Bot sesuai kebutuhan"
+    ],
 
-    description:
-      "Build server Discord Community sesuai kebutuhan.",
-
-    packages: {
-
-      packet1: {
-        name: "Packet 1",
-        price: "6.000 IDR",
-
-        include: [
-          "Channel Setup",
-          "Server Settings",
-          "Permission Management",
-          "Role Management",
-          "Tidak termasuk bot"
-        ]
-      },
-
-      packet2: {
-        name: "Packet 2",
-        price: "12.000 IDR",
-
-        include: [
-          "Channel Setup",
-          "Server Settings",
-          "Permission Management",
-          "Role Management",
-          "Server Bot",
-          "Moderator Bot",
-          "Take Role",
-          "Request bot lainnya"
-        ]
-      }
-
-    }
+    benefit: [
+      "Struktur server lebih lengkap dan terorganisir",
+      "Pengaturan role dan permission lebih terkontrol",
+      "Dilengkapi konfigurasi bot dasar",
+      "Sistem server disesuaikan dengan kebutuhan",
+      "Membantu server siap digunakan dengan lebih cepat"
+    ]
   },
 
-  build_roleplay: {
+  roleplay_a: {
+    id: "roleplay_a",
+    category: "build_discord",
+    name: "ROLEPLAY PACKET A",
+    title: "BUILD DISCORD — ROLEPLAY",
+    price: 15000,
+    slot: 4,
 
-    name:
-      "🚔 Roleplay Server",
+    include: [
+      "Channel Management",
+      "Role Management",
+      "Category Setup",
+      "Permission Management",
+      "2× Revisi"
+    ],
 
-    description:
-      "Build server Discord untuk kebutuhan Roleplay.",
-
-    packages: {
-
-      packetA: {
-        name: "Packet A",
-        price: "15.000 IDR",
-
-        include: [
-          "Channel Management",
-          "Role Management",
-          "Tidak termasuk bot"
-        ]
-      },
-
-      packetB: {
-        name: "Packet B",
-        price: "20.000 IDR",
-
-        include: [
-          "Channel Management",
-          "Role Management",
-          "Bot Setup",
-          "Tidak termasuk bot UCP / sistem server Roleplay"
-        ]
-      }
-
-    }
+    benefit: [
+      "Struktur server roleplay lebih terorganisir",
+      "Pembagian role lebih tertata",
+      "Category dan channel disusun sesuai kebutuhan",
+      "Permission dapat disesuaikan dengan struktur server",
+      "Server lebih siap digunakan untuk komunitas roleplay"
+    ]
   },
 
-  modpack_android: {
+  roleplay_b: {
+    id: "roleplay_b",
+    category: "build_discord",
+    name: "ROLEPLAY PACKET B",
+    title: "BUILD DISCORD — ROLEPLAY",
+    price: 20000,
+    slot: 4,
 
-    name:
-      "📱 Android Modpack",
+    include: [
+      "Channel Management",
+      "Role Management",
+      "Category Setup",
+      "Permission Management",
+      "Basic Bot Configuration",
+      "2× Revisi",
+      "Tidak termasuk UCP / Server System Bot"
+    ],
 
-    description:
-      "Jasa racik modpack untuk Android.",
-
-    packages: {
-
-      low: {
-        name: "Low",
-        price: "5.000 IDR",
-
-        include: [
-          "Racik modpack Low"
-        ]
-      },
-
-      medium: {
-        name: "Medium",
-        price: "7.000 IDR",
-
-        include: [
-          "Racik modpack Medium"
-        ]
-      }
-
-    }
+    benefit: [
+      "Struktur server roleplay lebih lengkap",
+      "Pengaturan role dan permission lebih terkontrol",
+      "Konfigurasi bot dasar telah disiapkan",
+      "Server disusun sesuai kebutuhan roleplay",
+      "Memberikan struktur server yang lebih profesional"
+    ]
   },
 
-  modpack_desktop: {
+  discord_faction: {
+    id: "discord_faction",
+    category: "build_discord",
+    name: "DISCORD FACTION",
+    title: "BUILD DISCORD — FACTION",
+    price: 10000,
+    slot: 4,
 
-    name:
-      "🖥️ Desktop Modpack",
+    include: [
+      "Category & Channel Setup",
+      "Role Management",
+      "Permission Management",
+      "Faction Structure",
+      "2× Revisi"
+    ],
 
-    description:
-      "Jasa racik modpack untuk Desktop.",
-
-    packages: {
-
-      low: {
-        name: "Low",
-        price: "7.000 IDR",
-
-        include: [
-          "Racik modpack Low"
-        ]
-      },
-
-      medium: {
-        name: "Medium",
-        price: "10.000 IDR",
-
-        include: [
-          "Racik modpack Medium"
-        ]
-      }
-
-    }
+    benefit: [
+      "Struktur faction lebih terorganisir",
+      "Role faction disusun sesuai kebutuhan",
+      "Permission lebih terkontrol",
+      "Channel faction dibuat lebih sistematis",
+      "Tampilan faction lebih profesional"
+    ]
   },
 
-  rekber: {
+  discord_store: {
+    id: "discord_store",
+    category: "build_discord",
+    name: "DISCORD STORE",
+    title: "BUILD DISCORD — STORE",
+    price: 12000,
+    slot: 4,
 
-    name: "🤝 Rekber",
+    include: [
+      "Category & Channel Setup",
+      "Role Management",
+      "Permission Management",
+      "Store Structure",
+      "Basic Store Configuration",
+      "2× Revisi"
+    ],
 
-    description:
-      "Layanan rekening bersama untuk membantu proses transaksi.",
-
-    packages: {
-
-      fee: {
-        name: "Fee Rekber",
-        price:
-          "Sesuai nominal transaksi",
-
-        include: [
-          "1.000 – 5.000 IDR → Fee 1.000 IDR",
-          "6.000 – 15.000 IDR → Fee 2.000 IDR",
-          "16.000 – 35.000 IDR → Fee 3.000 IDR",
-          "36.000 – 50.000 IDR → Fee 4.000 IDR",
-          "51.000+ IDR → Fee 5.000 IDR"
-        ]
-      }
-
-    }
+    benefit: [
+      "Struktur server store lebih terorganisir",
+      "Channel produk dan transaksi lebih tertata",
+      "Permission dapat disesuaikan",
+      "Struktur toko dibuat lebih mudah digunakan",
+      "Memberikan tampilan store yang lebih profesional"
+    ]
   },
 
-  setup_bot: {
+  // =============================
+  // SET UP BOT
+  // =============================
 
-    name:
-      "🤖 Set Up Bot",
+  add_features: {
+    id: "add_features",
+    category: "setup_bot",
+    name: "ADD FEATURES",
+    title: "SET UP BOT — ADD FEATURES",
+    price: 5000,
+    priceText: "5.000 IDR / feature",
+    slot: 4
+  },
 
-    description:
-      "Setup dan konfigurasi bot Discord sesuai kebutuhan server.",
+  delete_features: {
+    id: "delete_features",
+    category: "setup_bot",
+    name: "DELETE FEATURES",
+    title: "SET UP BOT — DELETE FEATURES",
+    price: 4000,
+    priceText: "4.000 IDR / feature",
+    slot: 4
+  },
 
-    packages: {
+  setup_bot_discord: {
+    id: "setup_bot_discord",
+    category: "setup_bot",
+    name: "SET UP BOT DISCORD",
+    title: "SET UP BOT — DISCORD",
+    price: 15000,
+    priceText: "15.000 IDR / 4 feature",
+    slot: 4,
 
-      consultation: {
-        name:
-          "Custom Bot Setup",
+    include: [
+      "Set Up Bot Discord",
+      "Konfigurasi hingga 4 Feature",
+      "Pengaturan Command",
+      "Pengaturan Permission",
+      "Basic Testing"
+    ],
 
-        price:
-          "Konsultasi",
+    benefit: [
+      "Bot siap digunakan sesuai kebutuhan",
+      "Konfigurasi fitur lebih terstruktur",
+      "Command dan permission disesuaikan dengan kebutuhan server",
+      "Membantu mengurangi proses konfigurasi secara manual"
+    ]
+  },
 
-        include: [
-          "Custom setup sesuai kebutuhan",
-          "Konsultasi fitur bot",
-          "Open ticket untuk pembahasan"
-        ]
-      }
+  create_bot_js: {
+    id: "create_bot_js",
+    category: "setup_bot",
+    name: "CREATE BOT JS",
+    title: "SET UP BOT — CREATE BOT JS",
+    price: 20000,
+    priceText: "20.000 IDR",
+    slot: 4,
 
-    }
+    include: [
+      "Pembuatan Bot Discord Berbasis JavaScript",
+      "Request fitur sesuai kebutuhan",
+      "Konfigurasi dasar bot",
+      "Struktur kode yang terorganisir",
+      "Basic Testing"
+    ],
+
+    benefit: [
+      "Bot dibuat sesuai kebutuhan dan request",
+      "Fitur dapat disesuaikan dengan konsep server",
+      "Mendapatkan bot yang siap dikembangkan lebih lanjut",
+      "Request bebas dengan batasan sesuai kesepakatan"
+    ]
+  },
+
+  // =============================
+  // BUILD MODPACK
+  // =============================
+
+  android_low: {
+    id: "android_low",
+    category: "build_modpack",
+    name: "ANDROID LOW",
+    title: "BUILD MODPACK — ANDROID LOW",
+    price: 5000,
+    slot: 4,
+
+    include: [
+      "Modpack untuk Android Low",
+      "Optimasi mod sesuai perangkat",
+      "Basic Testing"
+    ],
+
+    benefit: [
+      "Modpack disesuaikan untuk perangkat dengan spesifikasi rendah",
+      "Membantu menjaga performa game",
+      "Modpack lebih ringan digunakan"
+    ]
+  },
+
+  android_medium: {
+    id: "android_medium",
+    category: "build_modpack",
+    name: "ANDROID MEDIUM",
+    title: "BUILD MODPACK — ANDROID MEDIUM",
+    price: 7000,
+    slot: 4,
+
+    include: [
+      "Modpack untuk Android Medium",
+      "Optimasi mod sesuai perangkat",
+      "Basic Testing"
+    ],
+
+    benefit: [
+      "Modpack disesuaikan dengan perangkat Android Medium",
+      "Kualitas mod dapat dibuat lebih optimal",
+      "Performa dan visual disesuaikan dengan perangkat"
+    ]
+  },
+
+  desktop_low: {
+    id: "desktop_low",
+    category: "build_modpack",
+    name: "DESKTOP LOW",
+    title: "BUILD MODPACK — DESKTOP LOW",
+    price: 7000,
+    slot: 4,
+
+    include: [
+      "Modpack untuk Desktop Low",
+      "Optimasi mod sesuai perangkat",
+      "Basic Testing"
+    ],
+
+    benefit: [
+      "Modpack disesuaikan untuk perangkat dengan spesifikasi rendah",
+      "Membantu menjaga performa game",
+      "Penggunaan mod dibuat lebih ringan"
+    ]
+  },
+
+  desktop_medium: {
+    id: "desktop_medium",
+    category: "build_modpack",
+    name: "DESKTOP MEDIUM",
+    title: "BUILD MODPACK — DESKTOP MEDIUM",
+    price: 10000,
+    slot: 4,
+
+    include: [
+      "Modpack untuk Desktop Medium",
+      "Optimasi mod sesuai perangkat",
+      "Basic Testing"
+    ],
+
+    benefit: [
+      "Modpack disesuaikan dengan perangkat Desktop Medium",
+      "Kualitas visual dapat dibuat lebih optimal",
+      "Performa disesuaikan dengan kemampuan perangkat"
+    ]
+  },
+
+  // =============================
+  // DESIGN
+  // =============================
+
+  poster: {
+    id: "poster",
+    category: "design",
+    name: "POSTER",
+    title: "DESIGN — POSTER",
+    price: 7000,
+    priceText: "7.000 IDR / poster",
+    slot: 4,
+
+    include: [
+      "1× Custom Poster",
+      "Konsep sesuai request",
+      "Revisi sesuai kesepakatan"
+    ],
+
+    benefit: [
+      "Desain dibuat sesuai kebutuhan",
+      "Konsep dapat disesuaikan dengan request",
+      "Cocok untuk kebutuhan announcement, promotion, atau branding"
+    ]
   }
 
 };
-// =====================================
-// COMMAND
-// =====================================
+
+// ===============================
+// CATEGORY
+// ===============================
+
+const CATEGORIES = {
+  build_discord: {
+    name: "BUILD DISCORD",
+    channelId: CATALOG_CHANNELS.build_discord
+  },
+
+  setup_bot: {
+    name: "SET UP BOT",
+    channelId: CATALOG_CHANNELS.setup_bot
+  },
+
+  build_modpack: {
+    name: "BUILD MODPACK",
+    channelId: CATALOG_CHANNELS.build_modpack
+  },
+
+  design: {
+    name: "DESIGN",
+    channelId: CATALOG_CHANNELS.design
+  },
+
+  rekber: {
+    name: "REKBER",
+    channelId: CATALOG_CHANNELS.rekber
+  }
+};
+
+// ===============================
+// SLOT STORAGE
+// ===============================
+
+const slotData = {};
+
+function getCurrentWeekKey() {
+  const now = new Date();
+
+  const firstDay = new Date(
+    now.getFullYear(),
+    0,
+    1
+  );
+
+  const days =
+    Math.floor(
+      (now - firstDay) /
+      86400000
+    );
+
+  const week =
+    Math.ceil(
+      (days + firstDay.getDay() + 1) / 7
+    );
+
+  return `${now.getFullYear()}-${week}`;
+}
+
+function getSlot(productId) {
+  const weekKey = getCurrentWeekKey();
+
+  if (!slotData[productId]) {
+    slotData[productId] = {
+      week: weekKey,
+      extra: 0,
+      used: 0
+    };
+  }
+
+  if (slotData[productId].week !== weekKey) {
+    slotData[productId].week = weekKey;
+    slotData[productId].used = 0;
+  }
+
+  const product =
+    PRODUCTS[productId];
+
+  if (!product) {
+    return 0;
+  }
+
+  return Math.max(
+    0,
+    product.slot +
+      slotData[productId].extra -
+      slotData[productId].used
+  );
+}
+
+function useSlot(productId) {
+  const weekKey = getCurrentWeekKey();
+
+  if (!slotData[productId]) {
+    slotData[productId] = {
+      week: weekKey,
+      extra: 0,
+      used: 0
+    };
+  }
+
+  if (slotData[productId].week !== weekKey) {
+    slotData[productId].week = weekKey;
+    slotData[productId].used = 0;
+  }
+
+  const available =
+    getSlot(productId);
+
+  if (available <= 0) {
+    return false;
+  }
+
+  slotData[productId].used++;
+
+  return true;
+}
+
+// ===============================
+// STAFF CHECK
+// ===============================
+
+function isStaff(member) {
+  if (!member) {
+    return false;
+  }
+
+  return (
+    member.roles.cache.has(STAFF_ROLE_ID) ||
+    member.roles.cache.has(FOUNDER_ROLE_ID)
+  );
+}
+
+// ===============================
+// FORMAT PRICE
+// ===============================
+
+function formatPrice(product) {
+  if (product.priceText) {
+    return product.priceText;
+  }
+
+  return `${product.price.toLocaleString("id-ID")} IDR`;
+}
+
+// ===============================
+// PRODUCT EMBED
+// ===============================
+
+function buildProductEmbed(product) {
+  const embed =
+    new EmbedBuilder()
+      .setColor(0xFF7A00)
+      .setTitle(
+        `${EMOJI.discord}  ${product.title}`
+      )
+      .setDescription(
+        `\n` +
+        `${EMOJI.money}  **Harga**\n` +
+        `${formatPrice(product)}\n\n` +
+
+        `${EMOJI.thunder}  **Slot**\n` +
+        `${getSlot(product.id)} slot tersedia`
+      );
+
+  if (
+    product.include &&
+    product.include.length
+  ) {
+    embed.addFields({
+      name: `${EMOJI.thunder}  Include`,
+      value:
+        product.include
+          .map(item => item)
+          .join("\n")
+    });
+  }
+
+  if (
+    product.benefit &&
+    product.benefit.length
+  ) {
+    embed.addFields({
+      name: `${EMOJI.thunder}  Benefit`,
+      value:
+        product.benefit
+          .map(item => item)
+          .join("\n")
+    });
+  }
+
+  embed.setFooter({
+    text: "MONROE COMMUNITY © 2026"
+  });
+
+  return embed;
+}
+
+// ===============================
+// PRODUCT BUTTON
+// ===============================
+
+function buildProductButton(product) {
+  return new ActionRowBuilder()
+    .addComponents(
+      new ButtonBuilder()
+        .setCustomId(
+          `catalog_order_${product.id}`
+        )
+        .setLabel("ORDER")
+        .setEmoji("🛒")
+        .setStyle(ButtonStyle.Primary)
+    );
+}
+
+// ===============================
+// SEND PRODUCT
+// ===============================
+
+async function sendProduct(
+  channel,
+  product
+) {
+  if (!channel || !product) {
+    return null;
+  }
+
+  return await channel.send({
+    embeds: [
+      buildProductEmbed(product)
+    ],
+    components: [
+      buildProductButton(product)
+    ]
+  });
+}
+
+// ===============================
+// SEND ALL PRODUCTS
+// ===============================
+
+async function sendAllProducts(
+  channel,
+  category
+) {
+  const products =
+    Object.values(PRODUCTS)
+      .filter(
+        product =>
+          product.category === category
+      );
+
+  const sent = [];
+
+  for (const product of products) {
+    const message =
+      await sendProduct(
+        channel,
+        product
+      );
+
+    if (message) {
+      sent.push(message);
+    }
+  }
+
+  return sent;
+}
+
+// ===============================
+// SETUP CATALOG COMMAND
+// ===============================
 
 const catalogCommand =
   new SlashCommandBuilder()
     .setName("setup-catalog")
-    .setDescription("Mengirim Catalog Monroe.")
-    .addChannelOption(option =>
-      option
-        .setName("channel")
-        .setDescription("Channel Catalog.")
-        .setRequired(true)
+    .setDescription(
+      "Setup catalog Monroe Community"
     )
-    .setDefaultMemberPermissions(
-      PermissionFlagsBits.ManageGuild
+    .addStringOption(option =>
+      option
+        .setName("category")
+        .setDescription(
+          "Pilih kategori catalog"
+        )
+        .setRequired(true)
+        .addChoices(
+          {
+            name: "Build Discord",
+            value: "build_discord"
+          },
+          {
+            name: "Set Up Bot",
+            value: "setup_bot"
+          },
+          {
+            name: "Build Modpack",
+            value: "build_modpack"
+          },
+          {
+            name: "Design",
+            value: "design"
+          },
+          {
+            name: "Rekber",
+            value: "rekber"
+          }
+        )
     );
+
+// ===============================
+// SET SLOT COMMAND
+// ===============================
 
 const setSlotCommand =
   new SlashCommandBuilder()
     .setName("setslot")
     .setDescription(
-      "Mengatur slot Catalog selama 7 hari."
+      "Mengatur jumlah slot produk"
     )
     .addStringOption(option =>
       option
-        .setName("target")
+        .setName("product")
         .setDescription(
-          "Produk / paket yang ingin diberi slot."
+          "ID produk"
         )
         .setRequired(true)
-        .addChoices(
-          {
-            name: "Design - Poster",
-            value: "design_poster"
-          },
-          {
-            name:
-              "Discord Community - Packet 1",
-            value: "build_community_packet1"
-          },
-          {
-            name:
-              "Discord Community - Packet 2",
-            value: "build_community_packet2"
-          },
-          {
-            name:
-              "Discord Roleplay - Packet A",
-            value: "build_roleplay_packetA"
-          },
-          {
-            name:
-              "Discord Roleplay - Packet B",
-            value: "build_roleplay_packetB"
-          },
-          {
-            name:
-              "Modpack Android - Low",
-            value: "android_low"
-          },
-          {
-            name:
-              "Modpack Android - Medium",
-            value: "modpack_android_medium"
-          },
-          {
-            name:
-              "Modpack Desktop - Low",
-            value: "modpack_desktop_low"
-          },
-          {
-            name:
-              "Modpack Desktop - Medium",
-            value: "modpack_desktop_medium"
-          }
+        .setAutocomplete(true)
+    )
+    .addIntegerOption(option =>
+      option
+        .setName("slot")
+        .setDescription(
+          "Jumlah slot tambahan"
         )
+        .setRequired(true)
+        .setMinValue(0)
+    );
+
+// ===============================
+// ADD SLOT COMMAND
+// ===============================
+
+const addSlotCommand =
+  new SlashCommandBuilder()
+    .setName("addslot")
+    .setDescription(
+      "Menambah slot produk"
+    )
+    .addStringOption(option =>
+      option
+        .setName("product")
+        .setDescription(
+          "ID produk"
+        )
+        .setRequired(true)
+        .setAutocomplete(true)
     )
     .addIntegerOption(option =>
       option
         .setName("amount")
-        .setDescription("Jumlah slot.")
-        .setMinValue(0)
-        .setMaxValue(100)
+        .setDescription(
+          "Jumlah slot tambahan"
+        )
         .setRequired(true)
-    )
-    .setDefaultMemberPermissions(
-      PermissionFlagsBits.ManageGuild
+        .setMinValue(1)
     );
 
-// =====================================
-// PERMISSION
-// =====================================
-
-function canManageCatalog(member) {
-  if (!member) return false;
-
-  return (
-    member.roles.cache.has(
-      STAFF_ROLE_ID
-    ) ||
-    member.roles.cache.has(
-      FOUNDER_ROLE_ID
-    ) ||
-    member.permissions.has(
-      PermissionFlagsBits.Administrator
-    )
-  );
-}
-
-// =====================================
-// MAIN CATALOG
-// =====================================
-
-function createMainCatalog() {
-  return [
-
-    new ContainerBuilder()
-      .setAccentColor(0xF97316)
-
-      .addTextDisplayComponents(
-        new TextDisplayBuilder()
-          .setContent(
-            "# 🛍️ MONROE CATALOG\n" +
-            "Pilih jasa yang ingin kamu lihat."
-          )
-      )
-
-      .addSeparatorComponents(
-        new SeparatorBuilder()
-      )
-
-      .addTextDisplayComponents(
-        new TextDisplayBuilder()
-          .setContent(
-            "Pilih salah satu kategori di bawah."
-          )
-      ),
-
-    new ActionRowBuilder()
-      .addComponents(
-
-        new ButtonBuilder()
-          .setCustomId(
-            "catalog_design"
-          )
-          .setLabel(
-            "Jasa Design"
-          )
-          .setEmoji("🎨")
-          .setStyle(
-            ButtonStyle.Secondary
-          ),
-
-        new ButtonBuilder()
-          .setCustomId(
-            "catalog_build"
-          )
-          .setLabel(
-            "Build Discord"
-          )
-          .setEmoji("💻")
-          .setStyle(
-            ButtonStyle.Secondary
-          ),
-
-        new ButtonBuilder()
-          .setCustomId(
-            "catalog_modpack"
-          )
-          .setLabel(
-            "Racik Modpack"
-          )
-          .setEmoji("🧰")
-          .setStyle(
-            ButtonStyle.Secondary
-          ),
-
-        new ButtonBuilder()
-          .setCustomId(
-            "catalog_rekber"
-          )
-          .setLabel(
-            "Rekber"
-          )
-          .setEmoji("🤝")
-          .setStyle(
-            ButtonStyle.Secondary
-          ),
-
-        new ButtonBuilder()
-          .setCustomId(
-            "catalog_bot"
-          )
-          .setLabel(
-            "Set Up Bot"
-          )
-          .setEmoji("🤖")
-          .setStyle(
-            ButtonStyle.Secondary
-          )
-      )
-  ];
-}
-
-// =====================================
-// PRODUCT VIEW
-// =====================================
-
-function createProductView(
-  productKey
-) {
-
-  const product =
-    products[productKey];
-
-  const components = [
-
-    new ContainerBuilder()
-      .setAccentColor(0xF97316)
-
-      .addTextDisplayComponents(
-        new TextDisplayBuilder()
-          .setContent(
-            `# ${product.name}\n` +
-            `${product.description}`
-          )
-      )
-  ];
-
-  const packetKeys =
-    Object.keys(
-      product.packages
-    );
-
-  for (
-    const packetKey
-    of packetKeys
-  ) {
-
-    const packet =
-      product.packages[
-        packetKey
-      ];
-
-    const slotKey =
-      `${productKey}_${packetKey}`;
-
-    const slot =
-      getSlot(slotKey);
-
-    components.push(
-
-      new ContainerBuilder()
-        .setAccentColor(0xF97316)
-
-        .addTextDisplayComponents(
-          new TextDisplayBuilder()
-            .setContent(
-
-              `## ${packet.name}\n` +
-
-              `💰 **${packet.price}**\n\n` +
-
-              `**Include:**\n` +
-
-              packet.include
-                .map(
-                  item =>
-                    `• ${item}`
-                )
-                .join("\n") +
-
-              `\n\n` +
-
-              `🎟️ **Slot: ${slot}**`
-            )
-        )
-
-        .addActionRowComponents(
-
-          new ActionRowBuilder()
-            .addComponents(
-
-              new ButtonBuilder()
-                .setCustomId(
-                  `catalog_order_${productKey}_${packetKey}`
-                )
-                .setLabel(
-                  slot > 0
-                    ? "AMBIL PAKET"
-                    : "SLOT PENUH"
-                )
-                .setEmoji(
-                  slot > 0
-                    ? "🛒"
-                    : "🔒"
-                )
-                .setStyle(
-                  slot > 0
-                    ? ButtonStyle.Success
-                    : ButtonStyle.Secondary
-                )
-                .setDisabled(
-                  slot <= 0
-                )
-            )
-        )
-    );
-  }
-
-  components.push(
-
-    new ActionRowBuilder()
-      .addComponents(
-
-        new ButtonBuilder()
-          .setCustomId(
-            "catalog_back"
-          )
-          .setLabel(
-            "Kembali"
-          )
-          .setStyle(
-            ButtonStyle.Secondary
-          )
-      )
-  );
-
-  return components;
-}
-
-// =====================================
-// SETUP CATALOG
-// =====================================
+// ===============================
+// HANDLE SETUP CATALOG
+// ===============================
 
 async function handleCatalogCommand(
   interaction
 ) {
-
-  if (
-    !canManageCatalog(
-      interaction.member
-    )
-  ) {
-
+  if (!isStaff(interaction.member)) {
     return interaction.reply({
       content:
-        "❌ Hanya Staff/Founder yang dapat menggunakan command ini.",
+        "❌ Kamu tidak memiliki permission.",
+      ephemeral: true
+    });
+  }
+
+  const category =
+    interaction.options.getString(
+      "category"
+    );
+
+  const categoryData =
+    CATEGORIES[category];
+
+  if (!categoryData) {
+    return interaction.reply({
+      content:
+        "❌ Category tidak ditemukan.",
       ephemeral: true
     });
   }
 
   const channel =
-    interaction.options.getChannel(
-      "channel"
+    interaction.guild.channels.cache.get(
+      categoryData.channelId
     );
 
-  if (
-    !channel ||
-    channel.type !==
-      ChannelType.GuildText
-  ) {
-
+  if (!channel) {
     return interaction.reply({
       content:
-        "❌ Pilih text channel yang valid.",
+        "❌ Channel catalog tidak ditemukan.",
       ephemeral: true
     });
   }
 
-  await channel.send({
-    components:
-      createMainCatalog(),
-
-    flags:
-      MessageFlags.IsComponentsV2
+  await interaction.deferReply({
+    ephemeral: true
   });
 
-  return interaction.reply({
+  await sendAllProducts(
+    channel,
+    category
+  );
+
+  return interaction.editReply({
     content:
-      `✅ Catalog Beta berhasil dikirim ke ${channel}.`,
-    ephemeral: true
+      `✅ Catalog **${categoryData.name}** berhasil dikirim ke <#${channel.id}>.`
   });
 }
 
-// =====================================
-// SET SLOT
-// =====================================
+// ===============================
+// HANDLE SET SLOT
+// ===============================
 
 async function handleSetSlot(
   interaction
 ) {
-
-  if (
-    !canManageCatalog(
-      interaction.member
-    )
-  ) {
-
+  if (!isStaff(interaction.member)) {
     return interaction.reply({
       content:
-        "❌ Hanya Staff/Founder yang dapat mengatur slot.",
+        "❌ Kamu tidak memiliki permission.",
       ephemeral: true
     });
   }
 
-  const target =
+  const productId =
     interaction.options.getString(
-      "target"
+      "product"
     );
 
   const amount =
     interaction.options.getInteger(
-      "amount"
+      "slot"
     );
 
-  setSlot(
-    target,
-    amount
-  );
-
-  return interaction.reply({
-    content:
-      `✅ Slot **${target}** berhasil diatur menjadi **${amount}**.\n` +
-      `⏳ Slot ini berlaku selama **7 hari**.`,
-
-    ephemeral: true
-  });
-}
-
-// =====================================
-// ORDER TICKET
-// =====================================
-
-async function createOrderTicket(
-  interaction,
-  productKey,
-  packetKey
-) {
-
-  cleanExpiredSlots();
-
-  const slotKey =
-    `${productKey}_${packetKey}`;
-
-  const currentSlot =
-    getSlot(slotKey);
-
-  if (
-    currentSlot <= 0
-  ) {
-
-    return interaction.reply({
-      content:
-        "❌ Slot untuk paket ini sudah habis.",
-      ephemeral: true
-    });
-  }
-
   const product =
-    products[
-      productKey
-    ];
+    PRODUCTS[productId];
 
-  const packet =
-    product?.packages?.[
-      packetKey
-    ];
-
-  if (
-    !product ||
-    !packet
-  ) {
-
+  if (!product) {
     return interaction.reply({
       content:
         "❌ Produk tidak ditemukan.",
@@ -807,638 +856,225 @@ async function createOrderTicket(
     });
   }
 
-  const guild =
-    interaction.guild;
+  const weekKey =
+    getCurrentWeekKey();
 
-  const existing =
-    guild.channels.cache.find(
-      channel =>
-        channel.topic ===
-        `catalog-owner:${interaction.user.id}`
-    );
-
-  if (existing) {
-
-    return interaction.reply({
-      content:
-        `❌ Kamu masih memiliki order aktif: ${existing}.`,
-      ephemeral: true
-    });
+  if (!slotData[productId]) {
+    slotData[productId] = {
+      week: weekKey,
+      extra: 0,
+      used: 0
+    };
   }
 
-  const category =
-    guild.channels.cache.find(
-      channel =>
-        channel.type ===
-          ChannelType.GuildCategory &&
-        channel.name ===
-          ORDER_CATEGORY_NAME
-    );
+  slotData[productId].week =
+    weekKey;
 
-  const overwrites = [
+  slotData[productId].used = 0;
 
-    {
-      id:
-        guild.roles.everyone.id,
+  slotData[productId].extra =
+    amount - product.slot;
 
-      deny: [
-        "ViewChannel"
-      ]
-    },
-
-    {
-      id:
-        interaction.user.id,
-
-      allow: [
-        "ViewChannel",
-        "SendMessages",
-        "ReadMessageHistory"
-      ]
-    },
-
-    {
-      id:
-        STAFF_ROLE_ID,
-
-      allow: [
-        "ViewChannel",
-        "SendMessages",
-        "ReadMessageHistory"
-      ]
-    },
-
-    {
-      id:
-        FOUNDER_ROLE_ID,
-
-      allow: [
-        "ViewChannel",
-        "SendMessages",
-        "ReadMessageHistory"
-      ]
-    },
-
-    {
-      id:
-        guild.members.me.id,
-
-      allow: [
-        "ViewChannel",
-        "SendMessages",
-        "ReadMessageHistory",
-        "ManageChannels"
-      ]
-    }
-  ];
-
-  const ticket =
-    await guild.channels.create({
-
-      name:
-        `order-${interaction.user.username}`
-          .toLowerCase()
-          .replace(
-            /[^a-z0-9-]/g,
-            ""
-          )
-          .slice(0, 90),
-
-      type:
-        ChannelType.GuildText,
-
-      parent:
-        category?.id ||
-        null,
-
-      topic:
-        `catalog-owner:${interaction.user.id}`,
-
-      permissionOverwrites:
-        overwrites
-    });
-
-  setSlot(
-    slotKey,
-    currentSlot - 1
-  );
-
-  const embed =
-    new EmbedBuilder()
-      .setColor(0xF97316)
-
-      .setTitle(
-        "🛒 MONROE ORDER"
-      )
-
-      .addFields(
-
-        {
-          name:
-            "👤 Buyer",
-
-          value:
-            `<@${interaction.user.id}>`
-        },
-
-        {
-          name:
-            "📦 Product",
-
-          value:
-            product.name
-        },
-
-        {
-          name:
-            "🎁 Package",
-
-          value:
-            packet.name
-        },
-
-        {
-          name:
-            "💰 Price",
-
-          value:
-            packet.price
-        },
-
-        {
-          name:
-            "🎟️ Remaining Slot",
-
-          value:
-            `${currentSlot - 1}`
-        },
-
-        {
-          name:
-            "📋 Include",
-
-          value:
-            packet.include
-              .map(
-                item =>
-                  `• ${item}`
-              )
-              .join("\n")
-        }
-
-      )
-
-      .setFooter({
-        text:
-          "MONROE COMMUNITY © 2026"
-      });
-
-  await ticket.send({
-
-    content:
-      `🛡️ **STAFF**\n` +
-      `<@&${STAFF_ROLE_ID}>\n\n` +
-      `🛒 Order dari <@${interaction.user.id}>`,
-
-    embeds: [
-      embed
-    ]
-  });
+  if (
+    slotData[productId].extra < 0
+  ) {
+    slotData[productId].extra = 0;
+  }
 
   return interaction.reply({
-
     content:
-      `✅ Order berhasil dibuat: ${ticket}\n` +
-      `🎟️ Slot tersisa: **${currentSlot - 1}**`,
-
+      `✅ Slot **${product.name}** sekarang menjadi **${getSlot(productId)} slot**.`,
     ephemeral: true
   });
 }
 
-// =====================================
-// BUTTON HANDLER
-// =====================================
+// ===============================
+// HANDLE ADD SLOT
+// ===============================
+
+async function handleAddSlot(
+  interaction
+) {
+  if (!isStaff(interaction.member)) {
+    return interaction.reply({
+      content:
+        "❌ Kamu tidak memiliki permission.",
+      ephemeral: true
+    });
+  }
+
+  const productId =
+    interaction.options.getString(
+      "product"
+    );
+
+  const amount =
+    interaction.options.getInteger(
+      "amount"
+    );
+
+  const product =
+    PRODUCTS[productId];
+
+  if (!product) {
+    return interaction.reply({
+      content:
+        "❌ Produk tidak ditemukan.",
+      ephemeral: true
+    });
+  }
+
+  const weekKey =
+    getCurrentWeekKey();
+
+  if (!slotData[productId]) {
+    slotData[productId] = {
+      week: weekKey,
+      extra: 0,
+      used: 0
+    };
+  }
+
+  if (
+    slotData[productId].week !==
+    weekKey
+  ) {
+    slotData[productId].week =
+      weekKey;
+
+    slotData[productId].used = 0;
+  }
+
+  slotData[productId].extra +=
+    amount;
+
+  return interaction.reply({
+    content:
+      `✅ Berhasil menambahkan **${amount} slot** untuk **${product.name}**.\n\nSlot tersedia sekarang: **${getSlot(productId)}**`,
+    ephemeral: true
+  });
+}
+
+// ===============================
+// HANDLE CATALOG INTERACTION
+// ===============================
 
 async function handleCatalogInteraction(
   interaction
 ) {
-
-  if (
-    !interaction.isButton()
-  ) {
-    return false;
+  if (!interaction.isButton()) {
+    return;
   }
 
-  const id =
-    interaction.customId;
-
   if (
-    !id.startsWith(
-      "catalog_"
+    !interaction.customId.startsWith(
+      "catalog_order_"
     )
   ) {
-    return false;
+    return;
   }
 
-  if (
-    id ===
-    "catalog_back"
-  ) {
-
-    await interaction.update({
-
-      components:
-        createMainCatalog(),
-
-      flags:
-        MessageFlags.IsComponentsV2
-    });
-
-    return true;
-  }
-
-  if (
-    id ===
-    "catalog_design"
-  ) {
-
-    await interaction.update({
-
-      components:
-        createProductView(
-          "design"
-        ),
-
-      flags:
-        MessageFlags.IsComponentsV2
-    });
-
-    return true;
-  }
-
-  if (
-    id ===
-    "catalog_build"
-  ) {
-
-    await interaction.update({
-
-      components: [
-
-        new ContainerBuilder()
-          .setAccentColor(
-            0xF97316
-          )
-
-          .addTextDisplayComponents(
-            new TextDisplayBuilder()
-              .setContent(
-                "# 💻 BUILD DISCORD\n" +
-                "Pilih jenis server."
-              )
-          ),
-
-        new ActionRowBuilder()
-          .addComponents(
-
-            new ButtonBuilder()
-              .setCustomId(
-                "catalog_build_community"
-              )
-              .setLabel(
-                "Community Server"
-              )
-              .setEmoji("🏢")
-              .setStyle(
-                ButtonStyle.Primary
-              ),
-
-            new ButtonBuilder()
-              .setCustomId(
-                "catalog_build_roleplay"
-              )
-              .setLabel(
-                "Roleplay Server"
-              )
-              .setEmoji("🚔")
-              .setStyle(
-                ButtonStyle.Primary
-              ),
-
-            new ButtonBuilder()
-              .setCustomId(
-                "catalog_back"
-              )
-              .setLabel(
-                "Kembali"
-              )
-              .setStyle(
-                ButtonStyle.Secondary
-              )
-          )
-      ],
-
-      flags:
-        MessageFlags.IsComponentsV2
-    });
-
-    return true;
-  }
-
-  if (
-    id ===
-    "catalog_build_community"
-  ) {
-
-    await interaction.update({
-
-      components:
-        createProductView(
-          "build_community"
-        ),
-
-      flags:
-        MessageFlags.IsComponentsV2
-    });
-
-    return true;
-  }
-
-  if (
-    id ===
-    "catalog_build_roleplay"
-  ) {
-
-    await interaction.update({
-
-      components:
-        createProductView(
-          "build_roleplay"
-        ),
-
-      flags:
-        MessageFlags.IsComponentsV2
-    });
-
-    return true;
-  }
-
-  if (
-    id ===
-    "catalog_modpack"
-  ) {
-
-    await interaction.update({
-
-      components: [
-
-        new ContainerBuilder()
-          .setAccentColor(
-            0xF97316
-          )
-
-          .addTextDisplayComponents(
-            new TextDisplayBuilder()
-              .setContent(
-                "# 🧰 RACIK MODPACK\n" +
-                "Pilih platform."
-              )
-          ),
-
-        new ActionRowBuilder()
-          .addComponents(
-
-            new ButtonBuilder()
-              .setCustomId(
-                "catalog_modpack_android"
-              )
-              .setLabel(
-                "Android"
-              )
-              .setEmoji("📱")
-              .setStyle(
-                ButtonStyle.Primary
-              ),
-
-            new ButtonBuilder()
-              .setCustomId(
-                "catalog_modpack_desktop"
-              )
-              .setLabel(
-                "Desktop"
-              )
-              .setEmoji("🖥️")
-              .setStyle(
-                ButtonStyle.Primary
-              ),
-
-            new ButtonBuilder()
-              .setCustomId(
-                "catalog_back"
-              )
-              .setLabel(
-                "Kembali"
-              )
-              .setStyle(
-                ButtonStyle.Secondary
-              )
-          )
-      ],
-
-      flags:
-        MessageFlags.IsComponentsV2
-    });
-
-    return true;
-  }
-
-  if (
-    id ===
-    "catalog_modpack_android"
-  ) {
-
-    await interaction.update({
-
-      components:
-        createProductView(
-          "modpack_android"
-        ),
-
-      flags:
-        MessageFlags.IsComponentsV2
-    });
-
-    return true;
-  }
-
-  if (
-    id ===
-    "catalog_modpack_desktop"
-  ) {
-
-    await interaction.update({
-
-      components:
-        createProductView(
-          "modpack_desktop"
-        ),
-
-      flags:
-        MessageFlags.IsComponentsV2
-    });
-
-    return true;
-  }
-
-  if (
-    id ===
-    "catalog_rekber"
-  ) {
-
-    await interaction.update({
-
-      components:
-        createProductView(
-          "rekber"
-        ),
-
-      flags:
-        MessageFlags.IsComponentsV2
-    });
-
-    return true;
-  }
-
-  if (
-    id ===
-    "catalog_bot"
-  ) {
-
-    await interaction.update({
-
-      components: [
-
-        new ContainerBuilder()
-          .setAccentColor(
-            0xF97316
-          )
-
-          .addTextDisplayComponents(
-            new TextDisplayBuilder()
-              .setContent(
-
-                "# 🤖 SET UP BOT\n\n" +
-
-                "Butuh bot Discord " +
-                "sesuai kebutuhan server?\n\n" +
-
-                "**Custom Bot Setup**\n" +
-
-                "Fitur dan kebutuhan dapat " +
-                "disesuaikan dengan server kamu.\n\n" +
-
-                "💬 Untuk konsultasi mengenai " +
-                "kebutuhan bot, silakan langsung open ticket."
-              )
-          ),
-
-        new ActionRowBuilder()
-          .addComponents(
-
-            new ButtonBuilder()
-              .setCustomId(
-                "catalog_bot_ticket"
-              )
-              .setLabel(
-                "OPEN TICKET"
-              )
-              .setEmoji("🎟️")
-              .setStyle(
-                ButtonStyle.Success
-              ),
-
-            new ButtonBuilder()
-              .setCustomId(
-                "catalog_back"
-              )
-              .setLabel(
-                "Kembali"
-              )
-              .setStyle(
-                ButtonStyle.Secondary
-              )
-          )
-      ],
-
-      flags:
-        MessageFlags.IsComponentsV2
-    });
-
-    return true;
-  }
-
-  if (
-    id ===
-    "catalog_bot_ticket"
-  ) {
-
-    return await createOrderTicket(
-      interaction,
-      "setup_bot",
-      "consultation"
-    );
-  }
-
-  if (
-  id.startsWith(
-    "catalog_order_"
-  )
-) {
-
-  const orderData =
-    id.replace(
+  const productId =
+    interaction.customId.replace(
       "catalog_order_",
       ""
     );
 
-  const separator =
-    orderData.lastIndexOf("_");
+  const product =
+    PRODUCTS[productId];
 
-  const productKey =
-    orderData.substring(
-      0,
-      separator
-    );
-
-  const packetKey =
-    orderData.substring(
-      separator + 1
-    );
-
-  return await createOrderTicket(
-    interaction,
-    productKey,
-    packetKey
-  );
+    if (!product) {
+    return interaction.reply({
+      content:
+        "❌ Produk tidak ditemukan.",
+      ephemeral: true
+    });
   }
 
-  return true;
+  const available =
+    getSlot(productId);
+
+  if (available <= 0) {
+    return interaction.reply({
+      content:
+        "❌ Slot produk ini sedang habis.",
+      ephemeral: true
+    });
+  }
+
+  return interaction.reply({
+    content:
+      `🛒 **${product.name}**\n\n` +
+      `Harga: **${formatPrice(product)}**\n` +
+      `Slot tersedia: **${available}**\n\n` +
+      `Silakan lanjutkan pemesanan melalui ticket Monroe Community.`,
+    ephemeral: true
+  });
 }
 
-// =====================================
+// ===============================
+// AUTOCOMPLETE
+// ===============================
+
+async function handleCatalogAutocomplete(
+  interaction
+) {
+  if (!interaction.isAutocomplete()) {
+    return;
+  }
+
+  const focused =
+    interaction.options.getFocused()
+      .toLowerCase();
+
+  const choices =
+    Object.values(PRODUCTS)
+      .filter(product =>
+        product.id
+          .toLowerCase()
+          .includes(focused) ||
+        product.name
+          .toLowerCase()
+          .includes(focused)
+      )
+      .slice(0, 25)
+      .map(product => ({
+        name:
+          `${product.name} — ${product.id}`,
+        value: product.id
+      }));
+
+  return interaction.respond(
+    choices
+  );
+}
+
+// ===============================
 // EXPORT
-// =====================================
+// ===============================
 
 module.exports = {
-
   catalogCommand,
-
   setSlotCommand,
+  addSlotCommand,
+
+  PRODUCTS,
+  CATEGORIES,
+  CATALOG_CHANNELS,
+
+  isStaff,
+
+  getSlot,
+  useSlot,
 
   handleCatalogCommand,
-
   handleCatalogInteraction,
+  handleSetSlot,
+  handleAddSlot,
+  handleCatalogAutocomplete,
 
-  handleSetSlot
-
+  sendProduct,
+  sendAllProducts,
+  buildProductEmbed,
+  buildProductButton
 };
