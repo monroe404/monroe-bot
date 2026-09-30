@@ -67,6 +67,17 @@ const {
 } = require("./features/freeRole");
 
 // ========================================
+// YOUTUBE DOWNLOADER
+// ========================================
+
+const {
+  youtubeCommand,
+  handleYoutube,
+  handleYoutubeInteraction,
+  handleYoutubeQuality
+} = require("./features/youtube");
+
+// ========================================
 // AI BOT
 // ========================================
 
@@ -110,6 +121,7 @@ const client = new Client({
 // ========================================
 
 client.once("ready", async () => {
+
   console.log("================================");
 
   console.log(
@@ -136,6 +148,8 @@ client.once("ready", async () => {
         addSlotCommand.toJSON(),
 
         freeRoleCommand.toJSON(),
+
+        youtubeCommand.toJSON(),
 
         ...moderationCommands
       ],
@@ -171,6 +185,7 @@ client.once("ready", async () => {
     );
 
   }
+
 });
 
 // ========================================
@@ -182,6 +197,34 @@ client.on(
   async interaction => {
 
     try {
+
+      // ====================================
+      // YOUTUBE INTERACTION
+      // ====================================
+
+      if (
+        interaction.isStringSelectMenu()
+      ) {
+
+        const youtubeFormatHandled =
+          await handleYoutubeInteraction(
+            interaction
+          );
+
+        if (youtubeFormatHandled) {
+          return;
+        }
+
+        const youtubeQualityHandled =
+          await handleYoutubeQuality(
+            interaction
+          );
+
+        if (youtubeQualityHandled) {
+          return;
+        }
+
+      }
 
       // ====================================
       // CATALOG AUTOCOMPLETE
@@ -255,12 +298,21 @@ client.on(
       }
 
       // ====================================
-      // SLASH COMMAND
+      // YOUTUBE SLASH COMMAND
       // ====================================
 
       if (
         interaction.isChatInputCommand()
       ) {
+
+        const youtubeHandled =
+          await handleYoutube(
+            interaction
+          );
+
+        if (youtubeHandled) {
+          return;
+        }
 
         // -------------------------------
         // SETUP FREE ROLE
