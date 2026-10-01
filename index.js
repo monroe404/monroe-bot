@@ -78,6 +78,15 @@ const {
 } = require("./features/youtube");
 
 // ========================================
+// SAMP SERVER LIST
+// ========================================
+
+const {
+  startSampSystem,
+  handleSampInteraction
+} = require("./features/samp");
+
+// ========================================
 // AI BOT
 // ========================================
 
@@ -97,10 +106,12 @@ app.get("/", (req, res) => {
 });
 
 app.listen(PORT, () => {
+
   console.log(
     "🌐 Web server berjalan di port " +
       PORT
   );
+
 });
 
 // ========================================
@@ -108,85 +119,111 @@ app.listen(PORT, () => {
 // ========================================
 
 const client = new Client({
+
   intents: [
+
     GatewayIntentBits.Guilds,
+
     GatewayIntentBits.GuildMembers,
+
     GatewayIntentBits.GuildMessages,
+
     GatewayIntentBits.MessageContent
+
   ]
+
 });
 
 // ========================================
 // READY
 // ========================================
 
-client.once("ready", async () => {
+client.once(
+  "ready",
+  async () => {
 
-  console.log("================================");
-
-  console.log(
-    "🤖 Bot login sebagai " +
-      client.user.tag
-  );
-
-  console.log("================================");
-
-  // ======================================
-  // REGISTER SLASH COMMAND
-  // ======================================
-
-  try {
-
-    await client.application.commands.set(
-      [
-        roleCommand.toJSON(),
-
-        catalogCommand.toJSON(),
-
-        setSlotCommand.toJSON(),
-
-        addSlotCommand.toJSON(),
-
-        freeRoleCommand.toJSON(),
-
-        youtubeCommand.toJSON(),
-
-        ...moderationCommands
-      ],
-      GUILD_ID
+    console.log(
+      "================================"
     );
 
     console.log(
-      "✅ Slash command berhasil didaftarkan."
+      "🤖 Bot login sebagai " +
+        client.user.tag
     );
 
-  } catch (error) {
+    console.log(
+      "================================"
+    );
 
-    console.error(
-      "❌ Gagal mendaftarkan slash command:",
-      error
+    // ======================================
+    // REGISTER SLASH COMMAND
+    // ======================================
+
+    try {
+
+      await client.application.commands.set(
+        [
+
+          roleCommand.toJSON(),
+
+          catalogCommand.toJSON(),
+
+          setSlotCommand.toJSON(),
+
+          addSlotCommand.toJSON(),
+
+          freeRoleCommand.toJSON(),
+
+          youtubeCommand.toJSON(),
+
+          ...moderationCommands
+
+        ],
+        GUILD_ID
+      );
+
+      console.log(
+        "✅ Slash command berhasil didaftarkan."
+      );
+
+    } catch (error) {
+
+      console.error(
+        "❌ Gagal mendaftarkan slash command:",
+        error
+      );
+
+    }
+
+    // ======================================
+    // TICKET PANEL
+    // ======================================
+
+    try {
+
+      await sendTicketPanel(
+        client
+      );
+
+    } catch (error) {
+
+      console.error(
+        "❌ Gagal mengirim Ticket Panel:",
+        error
+      );
+
+    }
+
+    // ======================================
+    // SAMP SERVER LIST
+    // ======================================
+
+    startSampSystem(
+      client
     );
 
   }
-
-  // ======================================
-  // TICKET PANEL
-  // ======================================
-
-  try {
-
-    await sendTicketPanel(client);
-
-  } catch (error) {
-
-    console.error(
-      "❌ Gagal mengirim Ticket Panel:",
-      error
-    );
-
-  }
-
-});
+);
 
 // ========================================
 // INTERACTION CREATE
@@ -197,6 +234,27 @@ client.on(
   async interaction => {
 
     try {
+
+      // ====================================
+      // SAMP SERVER LIST
+      // ====================================
+
+      if (
+        interaction.isButton() &&
+        interaction.customId ===
+          "monroe_samp_refresh"
+      ) {
+
+        const handled =
+          await handleSampInteraction(
+            interaction
+          );
+
+        if (handled) {
+          return;
+        }
+
+      }
 
       // ====================================
       // YOUTUBE INTERACTION
@@ -241,7 +299,7 @@ client.on(
       }
 
       // ====================================
-      // MODERATION SLASH COMMAND
+      // MODERATION
       // ====================================
 
       if (
@@ -261,7 +319,6 @@ client.on(
 
       // ====================================
       // FREE ROLE
-      // BUTTON + SELECT MENU
       // ====================================
 
       if (
@@ -420,9 +477,12 @@ client.on(
       ) {
 
         await interaction.reply({
+
           content:
             "❌ Terjadi kesalahan.",
+
           ephemeral: true
+
         }).catch(() => {});
 
       }
