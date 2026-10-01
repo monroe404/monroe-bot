@@ -78,13 +78,12 @@ const {
 } = require("./features/youtube");
 
 // ========================================
-// SAMP SERVER LIST
+// AI IMAGE GENERATOR
 // ========================================
 
 const {
-  startSampSystem,
-  handleSampInteraction
-} = require("./features/samp");
+  handleImagine
+} = require("./features/ai-image");
 
 // ========================================
 // AI BOT
@@ -214,14 +213,6 @@ client.once(
 
     }
 
-    // ======================================
-    // SAMP SERVER LIST
-    // ======================================
-
-    startSampSystem(
-      client
-    );
-
   }
 );
 
@@ -234,27 +225,6 @@ client.on(
   async interaction => {
 
     try {
-
-      // ====================================
-      // SAMP SERVER LIST
-      // ====================================
-
-      if (
-        interaction.isButton() &&
-        interaction.customId ===
-          "monroe_samp_refresh"
-      ) {
-
-        const handled =
-          await handleSampInteraction(
-            interaction
-          );
-
-        if (handled) {
-          return;
-        }
-
-      }
 
       // ====================================
       // YOUTUBE INTERACTION
@@ -308,6 +278,26 @@ client.on(
 
         const handled =
           await handleModerationInteraction(
+            interaction
+          );
+
+        if (handled) {
+          return;
+        }
+
+      }
+
+      // ====================================
+      // AI IMAGE GENERATOR
+      // ====================================
+
+      if (
+        interaction.isChatInputCommand() &&
+        interaction.commandName === "imagine"
+      ) {
+
+        const handled =
+          await handleImagine(
             interaction
           );
 
