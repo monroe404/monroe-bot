@@ -347,7 +347,7 @@ async function getNextProduct(query) {
   let cache =
     marketCache.get(key);
 
-  // Kalau belum ada cache, search dulu
+  // Search pertama
   if (!cache) {
     const products =
       await searchProducts(query);
@@ -367,9 +367,8 @@ async function getNextProduct(query) {
     );
   }
 
-  // Kalau sudah sampai akhir,
-  // search ulang untuk mendapatkan
-  // urutan hasil terbaru
+  // Kalau hasil sudah habis,
+  // ambil hasil pencarian baru
   if (
     cache.index >=
     cache.products.length
@@ -435,7 +434,7 @@ async function handleMarket(message) {
     await message.channel.sendTyping();
 
     // ========================================
-    // AMBIL PRODUK BERIKUTNYA
+    // NEXT PRODUCT
     // ========================================
 
     const product =
@@ -515,7 +514,8 @@ async function handleMarket(message) {
 
         .setDescription(
           `📝 **Informasi Produk**\n` +
-          `${description}`
+          `${description}\n\n` +
+          `🛒 [**Click for Buy**](${product.url})`
         )
 
         .addFields(
@@ -553,6 +553,10 @@ async function handleMarket(message) {
           text:
             "MONROE MARKET • Tokopedia"
         });
+
+    // ========================================
+    // PRODUCT IMAGE
+    // ========================================
 
     if (
       product.image_url
