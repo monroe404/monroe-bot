@@ -3,13 +3,17 @@ const {
 } = require("discord.js");
 
 // ========================================
+// MARKET CACHE
+// ========================================
+
+const marketCache = new Map();
+
+// ========================================
 // REEFAPI REQUEST
 // ========================================
 
 async function reefRequest(endpoint, body) {
-
-  const apiKey =
-    process.env.REEF_API_KEY;
+  const apiKey = process.env.REEF_API_KEY;
 
   if (!apiKey) {
     throw new Error(
@@ -21,21 +25,17 @@ async function reefRequest(endpoint, body) {
     `https://api.reefapi.com/tokopedia/v1/${endpoint}`,
     {
       method: "POST",
-
       headers: {
         "x-api-key": apiKey,
         "content-type": "application/json"
       },
-
       body: JSON.stringify(body)
     }
   );
 
-  const data =
-    await response.json();
+  const data = await response.json();
 
   if (!response.ok || !data.ok) {
-
     throw new Error(
       data?.error?.message ||
       `ReefAPI Error ${response.status}`
@@ -50,15 +50,13 @@ async function reefRequest(endpoint, body) {
 // ========================================
 
 async function searchProducts(query) {
-
-  const data =
-    await reefRequest(
-      "search",
-      {
-        q: query,
-        page: 1
-      }
-    );
+  const data = await reefRequest(
+    "search",
+    {
+      q: query,
+      page: 1
+    }
+  );
 
   return data?.products || [];
 }
@@ -68,97 +66,333 @@ async function searchProducts(query) {
 // ========================================
 
 async function getProductDetail(url) {
-
-  const data =
-    await reefRequest(
-      "detail",
-      {
-        url
-      }
-    );
+  const data = await reefRequest(
+    "detail",
+    {
+      url
+    }
+  );
 
   return data;
 }
 
 // ========================================
-// CLEAN DESCRIPTION
+// CLEAN TEXT
 // ========================================
 
-function cleanDescription(value) {
-
-  if (!value) {
+function cleanText(value) {
+  if (
+    value === null ||
+    value === undefined
+  ) {
     return null;
   }
 
-  let text =
-    String(value);
+  let text = String(value);
 
-  // Hapus HTML
-  text =
-    text.replace(
-      /<[^>]*>/g,
-      " "
-    );
+  text = text.replace(
+    /<[^>]*>/g,
+    " "
+  );
 
-  // Hapus whitespace berlebihan
-  text =
-    text.replace(
-      /\s+/g,
-      " "
-    );
+  text = text.replace(
+    /\s+/g,
+    " "
+  );
 
-  text =
-    text.trim();
+  text = text.trim();
 
-  if (!text) {
-    return null;
-  }
-
-  // Biar embed tidak terlalu panjang
-  if (text.length > 600) {
-    text =
-      text.slice(0, 597) +
-      "...";
-  }
-
-  return text;
+  return text || null;
 }
 
 // ========================================
-// AMBIL DESKRIPSI DARI DETAIL
+// CATEGORY
 // ========================================
 
-function getDescription(detail) {
+function getCategory(detail) {
+  const categories =
+    detail?.category_breadcrumb;
 
-  const possibleDescriptions = [
-
-    detail?.description,
-
-    detail?.product?.description,
-
-    detail?.data?.description,
-
-    detail?.product?.detail?.description,
-
-    detail?.product_detail?.description,
-
-    detail?.content?.description
-
-  ];
-
-  for (
-    const value of possibleDescriptions
+  if (
+    Array.isArray(categories) &&
+    categories.length
   ) {
+    const names = categories
+      .map(item =>
+        cleanText(item?.name)
+      )
+      .filter(Boolean);
 
-    const cleaned =
-      cleanDescription(value);
-
-    if (cleaned) {
-      return cleaned;
+    if (names.length) {
+      return names.join(" › ");
     }
   }
 
-  return "Deskripsi produk tidak tersedia.";
+  if (Array.isArray(detail?.category)) {
+    const names = detail.category
+      .map(item =>
+        cleanText(
+          item?.name || item
+        )
+      )
+      .filter(Boolean);
+
+    if (names.length) {
+      return names.join(" › ");
+    }
+  }
+
+  return null;
+}
+
+// ========================================
+// CONDITION
+// ========================================
+
+function getCondition(detail) {
+  const condition =
+    cleanText(detail?.condition);
+
+  if (!condition) {
+    return null;
+  }
+
+  if (
+    condition.toUpperCase() === "NEW"
+  ) {
+    return "Baru";
+  }
+
+  if (
+    condition.toUpperCase() === "USED"
+  ) {
+    return "Bekas";
+  }
+
+  return condition;
+}
+
+// ========================================
+// STOCK
+// ========================================
+
+function getStock(detail) {
+  if (
+    detail?.stock === null ||
+    detail?.stock === undefined
+  ) {
+    return null;
+  }
+
+  return String(detail.stock);
+}
+
+// ========================================
+// SPECIFICATIONS
+// ========================================
+
+function getSpecifications(detail) {
+  const possibleSpecs = [
+    detail?.specifications,
+    detail?.specs,
+    detail?.attributes,
+    detail?.product?.specifications,
+    detail?.product?.specs,
+    detail?.product?.attributes
+  ];
+
+  let specs = null;
+
+  for (
+    const value of possibleSpecs
+  ) {
+    if (
+      Array.isArray(value) &&
+      value.length
+    ) {
+      specs = value;
+      break;
+    }
+
+    if (
+      value &&
+      typeof value === "object"
+    ) {
+      specs = Object.entries(value);
+      break;
+    }
+  }
+
+  if (!specs) {
+    return [];
+  }
+
+  const result = [];
+
+  for (
+    const item of specs
+  ) {
+    let name;
+    let value;
+
+    if (Array.isArray(item)) {
+      name = item[0];
+      value = item[1];
+    } else {
+      name =
+        item?.name ||
+        item?.key ||
+        item?.label;
+
+      value =
+        item?.value ||
+        item?.values ||
+        item?.text;
+    }
+
+    name = cleanText(name);
+
+    value = cleanText(
+      Array.isArray(value)
+        ? value.join(", ")
+        : value
+    );
+
+    if (
+      name &&
+      value
+    ) {
+      result.push({
+        name,
+        value
+      });
+    }
+  }
+
+  return result.slice(0, 5);
+}
+
+// ========================================
+// CREATE DESCRIPTION
+// ========================================
+
+function createDescription(
+  product,
+  detail
+) {
+  const parts = [];
+
+  const category =
+    getCategory(detail);
+
+  const condition =
+    getCondition(detail);
+
+  const stock =
+    getStock(detail);
+
+  const specs =
+    getSpecifications(detail);
+
+  if (category) {
+    parts.push(
+      `Kategori: **${category}**`
+    );
+  }
+
+  if (condition) {
+    parts.push(
+      `Kondisi: **${condition}**`
+    );
+  }
+
+  if (stock) {
+    parts.push(
+      `Stok: **${stock}**`
+    );
+  }
+
+  if (specs.length) {
+    parts.push(
+      "**Spesifikasi:**"
+    );
+
+    for (
+      const spec of specs
+    ) {
+      parts.push(
+        `• ${spec.name}: ${spec.value}`
+      );
+    }
+  }
+
+  if (!parts.length) {
+    return (
+      `Produk **${product?.name || "ini"}** ` +
+      `tersedia di Tokopedia.`
+    );
+  }
+
+  return parts.join("\n");
+}
+
+// ========================================
+// GET NEXT PRODUCT
+// ========================================
+
+async function getNextProduct(query) {
+  const key =
+    query.toLowerCase();
+
+  let cache =
+    marketCache.get(key);
+
+  // Kalau belum ada cache, search dulu
+  if (!cache) {
+    const products =
+      await searchProducts(query);
+
+    if (!products.length) {
+      return null;
+    }
+
+    cache = {
+      products,
+      index: 0
+    };
+
+    marketCache.set(
+      key,
+      cache
+    );
+  }
+
+  // Kalau sudah sampai akhir,
+  // search ulang untuk mendapatkan
+  // urutan hasil terbaru
+  if (
+    cache.index >=
+    cache.products.length
+  ) {
+    const products =
+      await searchProducts(query);
+
+    if (products.length) {
+      cache.products = products;
+      cache.index = 0;
+    } else {
+      cache.index = 0;
+    }
+  }
+
+  const product =
+    cache.products[
+      cache.index
+    ];
+
+  cache.index++;
+
+  return product;
 }
 
 // ========================================
@@ -166,7 +400,6 @@ function getDescription(detail) {
 // ========================================
 
 async function handleMarket(message) {
-
   if (message.author.bot) {
     return false;
   }
@@ -187,12 +420,7 @@ async function handleMarket(message) {
       .slice(7)
       .trim();
 
-  // ======================================
-  // NO QUERY
-  // ======================================
-
   if (!query) {
-
     await message.reply(
       "❌ Gunakan:\n\n" +
       "`!market <nama produk>`\n\n" +
@@ -204,18 +432,16 @@ async function handleMarket(message) {
   }
 
   try {
-
     await message.channel.sendTyping();
 
-    // ====================================
-    // SEARCH
-    // ====================================
+    // ========================================
+    // AMBIL PRODUK BERIKUTNYA
+    // ========================================
 
-    const products =
-      await searchProducts(query);
+    const product =
+      await getNextProduct(query);
 
-    if (!products.length) {
-
+    if (!product) {
       await message.reply(
         `❌ Produk **${query}** tidak ditemukan.`
       );
@@ -223,164 +449,134 @@ async function handleMarket(message) {
       return true;
     }
 
-    // ====================================
-    // AMBIL 3 PRODUK
-    // ====================================
+    // ========================================
+    // DETAIL
+    // ========================================
 
-    const selected =
-      products.slice(0, 3);
+    let detail = null;
 
-    const embeds = [];
-
-    // ====================================
-    // DETAIL SETIAP PRODUK
-    // ====================================
-
-    for (
-      const product of selected
-    ) {
-
-      let detail = null;
-
-      try {
-
-        detail =
-          await getProductDetail(
-            product.url
-          );
-
-      } catch (error) {
-
-        console.error(
-          `⚠️ DETAIL ERROR:`,
-          error.message
+    try {
+      detail =
+        await getProductDetail(
+          product.url
         );
-
-      }
-
-      // ==================================
-      // DESCRIPTION
-      // ==================================
-
-      const description =
-        getDescription(detail);
-
-      // ==================================
-      // SHOP
-      // ==================================
-
-      const shopName =
-        product?.shop?.name ||
-        "Tokopedia";
-
-      const shopCity =
-        product?.shop?.city;
-
-      const shopText =
-        shopCity
-          ? `${shopName} • ${shopCity}`
-          : shopName;
-
-      // ==================================
-      // RATING
-      // ==================================
-
-      const rating =
-        product?.rating ||
-        "Belum ada";
-
-      // ==================================
-      // SOLD
-      // ==================================
-
-      const sold =
-        product?.sold ||
-        "Belum tersedia";
-
-      // ==================================
-      // EMBED
-      // ==================================
-
-      const embed =
-        new EmbedBuilder()
-
-          .setColor(0xff7a00)
-
-          .setTitle(
-            `📦 ${product.name || "Produk"}`
-          )
-
-          .setURL(
-            product.url
-          )
-
-          // FOTO BESAR
-          .setImage(
-            product.image_url
-          )
-
-          .setDescription(
-            `📝 **Deskripsi**\n` +
-            `${description}`
-          )
-
-          .addFields(
-
-            {
-              name: "💰 Harga",
-              value:
-                product.price ||
-                "Tidak tersedia",
-              inline: true
-            },
-
-            {
-              name: "🏪 Toko",
-              value:
-                shopText,
-              inline: true
-            },
-
-            {
-              name: "⭐ Rating",
-              value:
-                String(rating),
-              inline: true
-            },
-
-            {
-              name: "📦 Terjual",
-              value:
-                String(sold),
-              inline: true
-            }
-
-          )
-
-          .setFooter({
-            text:
-              "MONROE MARKET • Tokopedia"
-          });
-
-      embeds.push(embed);
+    } catch (error) {
+      console.error(
+        "⚠️ DETAIL ERROR:",
+        error.message
+      );
     }
 
-    // ====================================
-    // SEND RESULT
-    // ====================================
+    // ========================================
+    // DATA
+    // ========================================
+
+    const description =
+      createDescription(
+        product,
+        detail
+      );
+
+    const shopName =
+      product?.shop?.name ||
+      "Tokopedia";
+
+    const shopCity =
+      product?.shop?.city;
+
+    const shopText =
+      shopCity
+        ? `${shopName} • ${shopCity}`
+        : shopName;
+
+    const rating =
+      product?.rating ||
+      "Belum ada";
+
+    const sold =
+      product?.sold ||
+      "Belum tersedia";
+
+    // ========================================
+    // EMBED
+    // ========================================
+
+    const embed =
+      new EmbedBuilder()
+        .setColor(0xff7a00)
+
+        .setTitle(
+          `📦 ${product.name || "Produk"}`
+        )
+
+        .setURL(
+          product.url
+        )
+
+        .setDescription(
+          `📝 **Informasi Produk**\n` +
+          `${description}`
+        )
+
+        .addFields(
+          {
+            name: "💰 Harga",
+            value:
+              product.price ||
+              "Tidak tersedia",
+            inline: true
+          },
+
+          {
+            name: "🏪 Toko",
+            value:
+              shopText,
+            inline: true
+          },
+
+          {
+            name: "⭐ Rating",
+            value:
+              String(rating),
+            inline: true
+          },
+
+          {
+            name: "📦 Terjual",
+            value:
+              String(sold),
+            inline: true
+          }
+        )
+
+        .setFooter({
+          text:
+            "MONROE MARKET • Tokopedia"
+        });
+
+    if (
+      product.image_url
+    ) {
+      embed.setImage(
+        product.image_url
+      );
+    }
+
+    // ========================================
+    // SEND
+    // ========================================
 
     await message.reply({
-
       content:
         `🛒 **MONROE MARKET**\n` +
-        `🔎 Hasil pencarian: **${query}**`,
+        `🔎 Pencarian: **${query}**`,
 
-      embeds: embeds
-
+      embeds: [
+        embed
+      ]
     });
 
   } catch (error) {
-
     console.error(
       "❌ MARKET ERROR:",
       error
