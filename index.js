@@ -82,6 +82,7 @@ const {
 // ========================================
 
 const {
+  imagineCommand,
   handleImagine
 } = require("./features/ai-image");
 
@@ -174,6 +175,8 @@ client.once(
           freeRoleCommand.toJSON(),
 
           youtubeCommand.toJSON(),
+
+          imagineCommand.toJSON(),
 
           ...moderationCommands
 
@@ -296,14 +299,9 @@ client.on(
         interaction.commandName === "imagine"
       ) {
 
-        const handled =
-          await handleImagine(
-            interaction
-          );
-
-        if (handled) {
-          return;
-        }
+        return await handleImagine(
+          interaction
+        );
 
       }
 
