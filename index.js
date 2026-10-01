@@ -66,6 +66,10 @@ const {
   handleFreeRoleInteraction
 } = require("./features/freeRole");
 
+const {
+  handleTTSMessage
+} = require("./features/tts");
+
 // ========================================
 // YOUTUBE DOWNLOADER
 // ========================================
