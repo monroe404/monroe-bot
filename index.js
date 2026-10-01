@@ -70,6 +70,10 @@ const {
   handleTTSMessage
 } = require("./features/tts");
 
+const {
+  handleMarket
+} = require("./features/market");
+
 // ========================================
 // YOUTUBE DOWNLOADER
 // ========================================
@@ -534,6 +538,14 @@ client.on(
       // ==================================
 
       await handlePinterest(
+        message
+      );
+      
+      // ==================================
+      // MARKET
+      // ==================================
+
+      await handleMarket(
         message
       );
 
