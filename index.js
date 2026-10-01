@@ -87,6 +87,15 @@ const {
 } = require("./features/ai-image");
 
 // ========================================
+// REMOVE BAGROUND
+// ========================================
+
+const {
+  removeBgCommand,
+  handleRemoveBg
+} = require("./features/removebg");
+
+// ========================================
 // AI BOT
 // ========================================
 
@@ -177,6 +186,8 @@ client.once(
           youtubeCommand.toJSON(),
 
           imagineCommand.toJSON(),
+
+          removeBgCommand.toJSON(),
 
           ...moderationCommands
 
@@ -303,6 +314,17 @@ client.on(
           interaction
         );
 
+      }
+
+      // ====================================
+      // REMOVE BAGROUND
+      // ====================================
+
+      if (
+  interaction.isChatInputCommand() &&
+  interaction.commandName === "removebg"
+) {
+  return await handleRemoveBg(interaction);
       }
 
       // ====================================
