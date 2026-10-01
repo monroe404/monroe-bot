@@ -8,141 +8,329 @@ const {
   MessageFlags
 } = require("discord.js");
 
+// ========================================
+// CONFIG
+// ========================================
+
 const SAMP_CHANNEL_ID =
   process.env.SAMP_CHANNEL_ID;
 
 const UPDATE_INTERVAL =
   60 * 1000;
 
+const SERVERS_PER_PAGE = 10;
+
 // ========================================
-// GET SAMP SERVERS
+// GET SA-MP.CO.ID SERVER LIST
 // ========================================
 
 async function getSampServers() {
 
   const response = await fetch(
-    "https://api.open.mp/servers"
+    "https://r.jina.ai/https://sa-mp.co.id/",
+    {
+      headers: {
+        "User-Agent":
+          "Monroe-Discord-Bot/1.0"
+      }
+    }
   );
 
   if (!response.ok) {
+
     throw new Error(
-      `SAMP API HTTP ${response.status}`
+      `sa-mp.co.id HTTP ${response.status}`
     );
+
   }
 
-  const data =
-    await response.json();
+  const text =
+    await response.text();
 
-  if (!Array.isArray(data)) {
-    throw new Error(
-      "Format data SAMP tidak valid."
+  // ======================================
+  // FIND SERVER LIST
+  // ======================================
+
+  const start =
+    text.indexOf(
+      "Server List Indonesia"
     );
+
+  if (start === -1) {
+
+    throw new Error(
+      "Server List Indonesia tidak ditemukan."
+    );
+
   }
 
-  return data;
+  const section =
+    text.substring(start);
+
+  const lines =
+    section.split("\n");
+
+  const servers = [];
+
+  // ======================================
+  // PARSE TABLE
+  // ======================================
+
+  for (const rawLine of lines) {
+
+    const line =
+      rawLine.trim();
+
+    if (!line.startsWith("|")) {
+      continue;
+    }
+
+    if (
+      line.includes("Nama") &&
+      line.includes("Players")
+    ) {
+      continue;
+    }
+
+    if (
+      line.includes("---")
+    ) {
+      continue;
+    }
+
+    const columns =
+      line
+        .split("|")
+        .map(x => x.trim())
+        .filter(Boolean);
+
+    if (columns.length < 2) {
+      continue;
+    }
+
+    // Kolom terakhir biasanya:
+    // 300 / 600
+    const playerText =
+      columns[columns.length - 1];
+
+    const match =
+      playerText.match(
+        /(\d+)\s*\/\s*(\d+)/
+      );
+
+    if (!match) {
+      continue;
+    }
+
+    const players =
+      Number(match[1]);
+
+    const maxPlayers =
+      Number(match[2]);
+
+    // ====================================
+    // SERVER NAME
+    // ====================================
+
+    let name =
+      columns[0];
+
+    // Hilangkan "Image: ..."
+    name =
+      name.replace(
+        /^Image:\s*/i,
+        ""
+      );
+
+    // Bersihkan markdown
+    name =
+      name
+        .replace(/\*\*/g, "")
+        .replace(/\[|\]/g, "")
+        .trim();
+
+    if (!name) {
+      name =
+        "Unknown Server";
+    }
+
+    // ====================================
+    // REMOVE DUPLICATE
+    // ====================================
+
+    const duplicate =
+      servers.some(
+        server =>
+          server.name === name &&
+          server.players === players &&
+          server.maxPlayers ===
+            maxPlayers
+      );
+
+    if (duplicate) {
+      continue;
+    }
+
+    servers.push({
+      name,
+      players,
+      maxPlayers
+    });
+
+  }
+
+  return servers;
 }
 
 // ========================================
 // BUILD COMPONENTS V2
 // ========================================
 
-function buildSampComponents(servers) {
+function buildSampComponents(
+  servers,
+  page = 1
+) {
+
+  const totalPages =
+    Math.max(
+      1,
+      Math.ceil(
+        servers.length /
+          SERVERS_PER_PAGE
+      )
+    );
+
+  if (page > totalPages) {
+    page = totalPages;
+  }
+
+  if (page < 1) {
+    page = 1;
+  }
+
+  const start =
+    (page - 1) *
+    SERVERS_PER_PAGE;
+
+  const currentServers =
+    servers.slice(
+      start,
+      start + SERVERS_PER_PAGE
+    );
+
+  // ======================================
+  // CONTAINER
+  // ======================================
 
   const container =
     new ContainerBuilder();
 
   container.addTextDisplayComponents(
-    new TextDisplayBuilder().setContent(
-      "# 🎮 MONROE SAMP SERVER LIST\n" +
-      "Live server information"
-    )
+    new TextDisplayBuilder()
+      .setContent(
+        "# 🎮 MONROE SAMP SERVER LIST\n" +
+        "Server List Indonesia • Live"
+      )
   );
 
   container.addSeparatorComponents(
     new SeparatorBuilder()
   );
 
-  if (!servers.length) {
+  // ======================================
+  // SERVER LIST
+  // ======================================
+
+  if (
+    currentServers.length === 0
+  ) {
 
     container.addTextDisplayComponents(
-      new TextDisplayBuilder().setContent(
-        "⚠️ Tidak ada server yang tersedia."
-      )
+      new TextDisplayBuilder()
+        .setContent(
+          "⚠️ Server tidak ditemukan."
+        )
     );
 
   } else {
 
-    const list =
-      servers
-        .slice(0, 15)
-        .map((server, index) => {
+    const text =
+      currentServers
+        .map(
+          (server, index) => {
 
-          const players =
-            Number(
-              server.players ?? 0
+            const number =
+              start + index + 1;
+
+            let status =
+              "🔴";
+
+            if (
+              server.players > 0
+            ) {
+              status = "🟢";
+            }
+
+            return (
+              `**${number}. ${server.name}**\n` +
+              `${status} **${server.players}/${server.maxPlayers} Players**`
             );
 
-          const maxPlayers =
-            Number(
-              server.maxPlayers ??
-              server.maxplayers ??
-              0
-            );
-
-          const online =
-            server.online !== false;
-
-          const status =
-            online
-              ? "🟢"
-              : "🔴";
-
-          const hostname =
-            server.hostname ||
-            server.name ||
-            "Unknown Server";
-
-          const ip =
-            server.ip ||
-            server.address ||
-            "Unknown";
-
-          const version =
-            server.version ||
-            server.versionName ||
-            "Unknown";
-
-          return (
-            `**${index + 1}. ${hostname}**\n` +
-            `${status} **${players}/${maxPlayers} Players**\n` +
-            `📡 \`${ip}\`\n` +
-            `🎮 ${version}`
-          );
-
-        });
+          }
+        )
+        .join("\n\n");
 
     container.addTextDisplayComponents(
-      new TextDisplayBuilder().setContent(
-        list.join("\n\n")
-      )
+      new TextDisplayBuilder()
+        .setContent(text)
     );
+
   }
+
+  // ======================================
+  // FOOTER
+  // ======================================
 
   container.addSeparatorComponents(
     new SeparatorBuilder()
   );
 
+  const totalPlayers =
+    servers.reduce(
+      (total, server) =>
+        total + server.players,
+      0
+    );
+
   container.addTextDisplayComponents(
-    new TextDisplayBuilder().setContent(
-      `🔄 Updated: <t:${Math.floor(
-        Date.now() / 1000
-      )}:R>\n` +
-      `📊 Showing ${Math.min(
-        servers.length,
-        15
-      )} server(s)`
-    )
+    new TextDisplayBuilder()
+      .setContent(
+        `📊 **${servers.length} Server** • ` +
+        `👥 **${totalPlayers} Players**\n` +
+        `📄 Page **${page}/${totalPages}**\n` +
+        `🔄 Updated <t:${Math.floor(
+          Date.now() / 1000
+        )}:R>`
+      )
   );
+
+  // ======================================
+  // BUTTONS
+  // ======================================
+
+  const previousButton =
+    new ButtonBuilder()
+      .setCustomId(
+        `monroe_samp_page:${page - 1}`
+      )
+      .setLabel("PREVIOUS")
+      .setEmoji("◀️")
+      .setStyle(
+        ButtonStyle.Secondary
+      )
+      .setDisabled(
+        page <= 1
+      );
 
   const refreshButton =
     new ButtonBuilder()
@@ -155,10 +343,26 @@ function buildSampComponents(servers) {
         ButtonStyle.Secondary
       );
 
+  const nextButton =
+    new ButtonBuilder()
+      .setCustomId(
+        `monroe_samp_page:${page + 1}`
+      )
+      .setLabel("NEXT")
+      .setEmoji("▶️")
+      .setStyle(
+        ButtonStyle.Secondary
+      )
+      .setDisabled(
+        page >= totalPages
+      );
+
   container.addActionRowComponents(
     new ActionRowBuilder()
       .addComponents(
-        refreshButton
+        previousButton,
+        refreshButton,
+        nextButton
       )
   );
 
@@ -166,10 +370,34 @@ function buildSampComponents(servers) {
 }
 
 // ========================================
+// FIND MONROE MESSAGE
+// ========================================
+
+async function findSampMessage(
+  channel,
+  client
+) {
+
+  const messages =
+    await channel.messages.fetch({
+      limit: 20
+    });
+
+  return messages.find(
+    message =>
+      message.author.id ===
+      client.user.id
+  );
+}
+
+// ========================================
 // UPDATE PANEL
 // ========================================
 
-async function updateSampPanel(client) {
+async function updateSampPanel(
+  client,
+  page = 1
+) {
 
   if (!SAMP_CHANNEL_ID) {
 
@@ -188,61 +416,64 @@ async function updateSampPanel(client) {
       );
 
     if (!channel) {
+
       throw new Error(
         "Channel SAMP tidak ditemukan."
       );
+
     }
 
     const servers =
       await getSampServers();
 
+    console.log(
+      `🎮 SA-MP Indonesia: ${servers.length} server`
+    );
+
     const components =
       buildSampComponents(
-        servers
+        servers,
+        page
       );
 
-    const messages =
-      await channel.messages.fetch({
-        limit: 10
-      });
-
     const existing =
-      messages.find(
-        message =>
-          message.author.id ===
-          client.user.id
+      await findSampMessage(
+        channel,
+        client
       );
 
     if (existing) {
 
       await existing.edit({
+
         components: [
           components
         ],
+
         flags:
           MessageFlags.IsComponentsV2
+
       });
 
     } else {
 
       await channel.send({
+
         components: [
           components
         ],
+
         flags:
           MessageFlags.IsComponentsV2
+
       });
 
     }
 
-    console.log(
-      `🎮 SAMP list updated: ${servers.length} server(s)`
-    );
-
   } catch (error) {
 
     console.error(
-      "❌ SAMP update error:",
+      "❌ SAMP Error:",
       error
     );
 
@@ -250,16 +481,28 @@ async function updateSampPanel(client) {
 }
 
 // ========================================
-// START SYSTEM
+// AUTO UPDATE
 // ========================================
 
-function startSampSystem(client) {
+function startSampSystem(
+  client
+) {
 
-  updateSampPanel(client);
+  // Update pertama
+  updateSampPanel(
+    client,
+    1
+  );
 
+  // Update setiap 1 menit
   setInterval(
     () => {
-      updateSampPanel(client);
+
+      updateSampPanel(
+        client,
+        1
+      );
+
     },
     UPDATE_INTERVAL
   );
@@ -267,7 +510,7 @@ function startSampSystem(client) {
 }
 
 // ========================================
-// REFRESH BUTTON
+// BUTTON INTERACTION
 // ========================================
 
 async function handleSampInteraction(
@@ -275,21 +518,85 @@ async function handleSampInteraction(
 ) {
 
   if (
-    !interaction.isButton() ||
-    interaction.customId !==
-      "monroe_samp_refresh"
+    !interaction.isButton()
   ) {
 
     return false;
+
   }
 
-  await interaction.deferUpdate();
+  // ======================================
+  // REFRESH
+  // ======================================
 
-  await updateSampPanel(
-    interaction.client
-  );
+  if (
+    interaction.customId ===
+    "monroe_samp_refresh"
+  ) {
 
-  return true;
+    await interaction.deferUpdate();
+
+    await updateSampPanel(
+      interaction.client,
+      1
+    );
+
+    return true;
+
+  }
+
+  // ======================================
+  // PAGINATION
+  // ======================================
+
+  if (
+    interaction.customId.startsWith(
+      "monroe_samp_page:"
+    )
+  ) {
+
+    const page =
+      Number(
+        interaction.customId
+          .split(":")[1]
+      );
+
+    if (
+      !Number.isInteger(page) ||
+      page < 1
+    ) {
+
+      return true;
+
+    }
+
+    await interaction.deferUpdate();
+
+    const servers =
+      await getSampServers();
+
+    const components =
+      buildSampComponents(
+        servers,
+        page
+      );
+
+    await interaction.message.edit({
+
+      components: [
+        components
+      ],
+
+      flags:
+        MessageFlags.IsComponentsV2
+
+    });
+
+    return true;
+
+  }
+
+  return false;
 }
 
 // ========================================
