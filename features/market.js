@@ -3,7 +3,7 @@ const {
 } = require("discord.js");
 
 // ========================================
-// REEFAPI TOKOPEDIA
+// REEFAPI REQUEST
 // ========================================
 
 async function reefRequest(endpoint, body) {
@@ -13,7 +13,7 @@ async function reefRequest(endpoint, body) {
 
   if (!apiKey) {
     throw new Error(
-      "REEF_API_KEY belum dipasang."
+      "REEF_API_KEY belum dipasang di Railway."
     );
   }
 
@@ -31,9 +31,11 @@ async function reefRequest(endpoint, body) {
     }
   );
 
-  const data = await response.json();
+  const data =
+    await response.json();
 
   if (!response.ok || !data.ok) {
+
     throw new Error(
       data?.error?.message ||
       `ReefAPI Error ${response.status}`
@@ -44,18 +46,19 @@ async function reefRequest(endpoint, body) {
 }
 
 // ========================================
-// SEARCH PRODUCT
+// SEARCH PRODUCTS
 // ========================================
 
 async function searchProducts(query) {
 
-  const data = await reefRequest(
-    "search",
-    {
-      q: query,
-      page: 1
-    }
-  );
+  const data =
+    await reefRequest(
+      "search",
+      {
+        q: query,
+        page: 1
+      }
+    );
 
   return data?.products || [];
 }
@@ -66,14 +69,96 @@ async function searchProducts(query) {
 
 async function getProductDetail(url) {
 
-  const data = await reefRequest(
-    "detail",
-    {
-      url
-    }
-  );
+  const data =
+    await reefRequest(
+      "detail",
+      {
+        url
+      }
+    );
 
   return data;
+}
+
+// ========================================
+// CLEAN DESCRIPTION
+// ========================================
+
+function cleanDescription(value) {
+
+  if (!value) {
+    return null;
+  }
+
+  let text =
+    String(value);
+
+  // Hapus HTML
+  text =
+    text.replace(
+      /<[^>]*>/g,
+      " "
+    );
+
+  // Hapus whitespace berlebihan
+  text =
+    text.replace(
+      /\s+/g,
+      " "
+    );
+
+  text =
+    text.trim();
+
+  if (!text) {
+    return null;
+  }
+
+  // Biar embed tidak terlalu panjang
+  if (text.length > 600) {
+    text =
+      text.slice(0, 597) +
+      "...";
+  }
+
+  return text;
+}
+
+// ========================================
+// AMBIL DESKRIPSI DARI DETAIL
+// ========================================
+
+function getDescription(detail) {
+
+  const possibleDescriptions = [
+
+    detail?.description,
+
+    detail?.product?.description,
+
+    detail?.data?.description,
+
+    detail?.product?.detail?.description,
+
+    detail?.product_detail?.description,
+
+    detail?.content?.description
+
+  ];
+
+  for (
+    const value of possibleDescriptions
+  ) {
+
+    const cleaned =
+      cleanDescription(value);
+
+    if (cleaned) {
+      return cleaned;
+    }
+  }
+
+  return "Deskripsi produk tidak tersedia.";
 }
 
 // ========================================
@@ -86,19 +171,33 @@ async function handleMarket(message) {
     return false;
   }
 
-  if (!message.content.toLowerCase().startsWith("!market")) {
+  const content =
+    message.content.trim();
+
+  if (
+    !content
+      .toLowerCase()
+      .startsWith("!market")
+  ) {
     return false;
   }
 
   const query =
-    message.content
+    content
       .slice(7)
       .trim();
+
+  // ======================================
+  // NO QUERY
+  // ======================================
 
   if (!query) {
 
     await message.reply(
-      "❌ Gunakan:\n`!market <nama produk>`\n\nContoh:\n`!market laptop axioo`"
+      "❌ Gunakan:\n\n" +
+      "`!market <nama produk>`\n\n" +
+      "Contoh:\n" +
+      "`!market laptop axioo`"
     );
 
     return true;
@@ -107,6 +206,10 @@ async function handleMarket(message) {
   try {
 
     await message.channel.sendTyping();
+
+    // ====================================
+    // SEARCH
+    // ====================================
 
     const products =
       await searchProducts(query);
@@ -120,52 +223,109 @@ async function handleMarket(message) {
       return true;
     }
 
-    // Ambil maksimal 2 produk
+    // ====================================
+    // AMBIL 3 PRODUK
+    // ====================================
+
     const selected =
-      products.slice(0, 2);
+      products.slice(0, 3);
 
     const embeds = [];
 
-    for (const product of selected) {
+    // ====================================
+    // DETAIL SETIAP PRODUK
+    // ====================================
+
+    for (
+      const product of selected
+    ) {
 
       let detail = null;
 
       try {
+
         detail =
           await getProductDetail(
             product.url
           );
+
       } catch (error) {
+
         console.error(
-          "DETAIL ERROR:",
+          `⚠️ DETAIL ERROR:`,
           error.message
         );
+
       }
 
-      // Cari deskripsi dari beberapa kemungkinan field
-      const description =
-        detail?.description ||
-        detail?.product?.description ||
-        detail?.data?.description ||
-        "Deskripsi produk tidak tersedia.";
+      // ==================================
+      // DESCRIPTION
+      // ==================================
 
-      const shortDescription =
-        String(description)
-          .replace(/<[^>]*>/g, "")
-          .replace(/\s+/g, " ")
-          .trim()
-          .slice(0, 500);
+      const description =
+        getDescription(detail);
+
+      // ==================================
+      // SHOP
+      // ==================================
+
+      const shopName =
+        product?.shop?.name ||
+        "Tokopedia";
+
+      const shopCity =
+        product?.shop?.city;
+
+      const shopText =
+        shopCity
+          ? `${shopName} • ${shopCity}`
+          : shopName;
+
+      // ==================================
+      // RATING
+      // ==================================
+
+      const rating =
+        product?.rating ||
+        "Belum ada";
+
+      // ==================================
+      // SOLD
+      // ==================================
+
+      const sold =
+        product?.sold ||
+        "Belum tersedia";
+
+      // ==================================
+      // EMBED
+      // ==================================
 
       const embed =
         new EmbedBuilder()
+
           .setColor(0xff7a00)
+
           .setTitle(
-            `📦 ${product.name}`
+            `📦 ${product.name || "Produk"}`
           )
+
+          .setURL(
+            product.url
+          )
+
+          // FOTO BESAR
+          .setImage(
+            product.image_url
+          )
+
           .setDescription(
-            `📝 **Deskripsi**\n${shortDescription}`
+            `📝 **Deskripsi**\n` +
+            `${description}`
           )
+
           .addFields(
+
             {
               name: "💰 Harga",
               value:
@@ -173,41 +333,50 @@ async function handleMarket(message) {
                 "Tidak tersedia",
               inline: true
             },
+
             {
               name: "🏪 Toko",
               value:
-                product.shop?.name ||
-                "Tokopedia",
+                shopText,
               inline: true
             },
+
             {
               name: "⭐ Rating",
               value:
-                product.rating ||
-                "Belum ada",
+                String(rating),
+              inline: true
+            },
+
+            {
+              name: "📦 Terjual",
+              value:
+                String(sold),
               inline: true
             }
+
           )
-          .setURL(product.url)
+
           .setFooter({
             text:
               "MONROE MARKET • Tokopedia"
           });
 
-      if (product.image_url) {
-        embed.setThumbnail(
-          product.image_url
-        );
-      }
-
       embeds.push(embed);
     }
 
+    // ====================================
+    // SEND RESULT
+    // ====================================
+
     await message.reply({
+
       content:
         `🛒 **MONROE MARKET**\n` +
         `🔎 Hasil pencarian: **${query}**`,
-      embeds
+
+      embeds: embeds
+
     });
 
   } catch (error) {
@@ -218,7 +387,8 @@ async function handleMarket(message) {
     );
 
     await message.reply(
-      "❌ Gagal mencari produk.\nCoba lagi beberapa saat."
+      "❌ Gagal mencari produk.\n" +
+      "Coba lagi beberapa saat."
     );
   }
 
