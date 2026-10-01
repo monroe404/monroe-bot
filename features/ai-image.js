@@ -1,75 +1,125 @@
 const {
-    AttachmentBuilder,
-    EmbedBuilder
+  SlashCommandBuilder,
+  AttachmentBuilder,
+  EmbedBuilder
 } = require("discord.js");
 
-const axios = require("axios");
+const imagineCommand = new SlashCommandBuilder()
+  .setName("imagine")
+  .setDescription("Generate gambar menggunakan AI")
+  .addStringOption(option =>
+    option
+      .setName("prompt")
+      .setDescription("Deskripsikan gambar yang ingin dibuat")
+      .setRequired(true)
+  );
 
 async function generateImage(prompt) {
-    const apiKey = process.env.POLLINATIONS_API_KEY;
 
-    if (!apiKey) {
-        throw new Error("POLLINATIONS_API_KEY belum dipasang.");
+  const apiKey =
+    process.env.POLLINATIONS_API_KEY;
+
+  if (!apiKey) {
+    throw new Error(
+      "POLLINATIONS_API_KEY belum dipasang."
+    );
+  }
+
+  const encodedPrompt =
+    encodeURIComponent(prompt);
+
+  const url =
+    `https://gen.pollinations.ai/image/${encodedPrompt}` +
+    `?model=flux` +
+    `&width=1024` +
+    `&height=1024`;
+
+  const response = await fetch(url, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${apiKey}`
     }
+  });
 
-    const encodedPrompt = encodeURIComponent(prompt);
+  if (!response.ok) {
+    const errorText =
+      await response.text().catch(() => "");
 
-    const url =
-        `https://gen.pollinations.ai/image/${encodedPrompt}` +
-        `?model=flux` +
-        `&width=1024` +
-        `&height=1024`;
+    throw new Error(
+      `Pollinations Error ${response.status}: ${errorText}`
+    );
+  }
 
-    const response = await axios.get(url, {
-        headers: {
-            Authorization: `Bearer ${apiKey}`
-        },
-        responseType: "arraybuffer",
-        timeout: 120000
-    });
+  const arrayBuffer =
+    await response.arrayBuffer();
 
-    return Buffer.from(response.data);
+  return Buffer.from(arrayBuffer);
 }
 
 async function handleImagine(interaction) {
-    if (!interaction.isChatInputCommand()) return false;
-    if (interaction.commandName !== "imagine") return false;
 
-    const prompt = interaction.options.getString("prompt");
+  if (!interaction.isChatInputCommand()) {
+    return false;
+  }
 
-    await interaction.deferReply();
+  if (interaction.commandName !== "imagine") {
+    return false;
+  }
 
-    try {
-        const imageBuffer = await generateImage(prompt);
+  const prompt =
+    interaction.options.getString("prompt");
 
-        const file = new AttachmentBuilder(imageBuffer, {
-            name: "ai-image.png"
+  await interaction.deferReply();
+
+  try {
+
+    const imageBuffer =
+      await generateImage(prompt);
+
+    const file =
+      new AttachmentBuilder(
+        imageBuffer,
+        {
+          name: "monroe-ai.png"
+        }
+      );
+
+    const embed =
+      new EmbedBuilder()
+        .setTitle("🎨 AI Image Generator")
+        .setDescription(
+          `**Prompt:** ${prompt}`
+        )
+        .setImage(
+          "attachment://monroe-ai.png"
+        )
+        .setFooter({
+          text: "Monroe AI"
         });
 
-        const embed = new EmbedBuilder()
-            .setTitle("🎨 AI Image Generator")
-            .setDescription(`**Prompt:** ${prompt}`)
-            .setImage("attachment://ai-image.png")
-            .setFooter({
-                text: "Monroe AI"
-            });
+    await interaction.editReply({
+      embeds: [embed],
+      files: [file]
+    });
 
-        await interaction.editReply({
-            embeds: [embed],
-            files: [file]
-        });
+  } catch (error) {
 
-    } catch (error) {
-        console.error("AI IMAGE ERROR:", error);
+    console.error(
+      "❌ AI IMAGE ERROR:",
+      error
+    );
 
-        await interaction.editReply({
-            content: "❌ Gagal membuat gambar. Coba lagi nanti."
-        });
-    }
+    await interaction.editReply({
+      content:
+        "❌ Gagal membuat gambar.\n" +
+        "Coba lagi beberapa saat."
+    });
+  }
 
-    return true;
+  return true;
 }
 
 module.exports = {
-    handleImagine
+  imagineCommand,
+  handleImagine
 };
