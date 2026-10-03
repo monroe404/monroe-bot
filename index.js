@@ -75,6 +75,18 @@ const {
   handleMarket
 } = require("./features/market");
 
+const {
+  catalogCommand,
+  setSlotCommand,
+  addSlotCommand,
+  handleCatalogCommand,
+  handleCatalogInteraction,
+  handleSetSlot,
+  handleAddSlot,
+  handleCatalogAutocomplete,
+  handleCatalog
+} = require("./features/catalog");
+
 // ========================================
 // YOUTUBE DOWNLOADER
 // ========================================
