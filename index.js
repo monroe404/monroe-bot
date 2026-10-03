@@ -37,12 +37,17 @@ const {
   handlePinterest
 } = require("./features/pinterest");
 
+// ========================================
+// CATALOG
+// ========================================
+
 const {
   catalogCommand,
   setSlotCommand,
   addSlotCommand,
   handleCatalogCommand,
   handleCatalogInteraction,
+  handleCatalog,
   handleSetSlot,
   handleAddSlot,
   handleCatalogAutocomplete
@@ -123,9 +128,11 @@ app.get("/", (req, res) => {
 });
 
 app.listen(PORT, () => {
+
   console.log(
     "🌐 Web server berjalan di port " + PORT
   );
+
 });
 
 // ========================================
@@ -133,84 +140,111 @@ app.listen(PORT, () => {
 // ========================================
 
 const client = new Client({
+
   intents: [
+
     GatewayIntentBits.Guilds,
+
     GatewayIntentBits.GuildMembers,
+
     GatewayIntentBits.GuildMessages,
+
     GatewayIntentBits.MessageContent
+
   ]
+
 });
 
 // ========================================
 // READY
 // ========================================
 
-client.once("ready", async () => {
+client.once(
+  "ready",
+  async () => {
 
-  console.log("================================");
-  console.log(
-    "🤖 Bot login sebagai " + client.user.tag
-  );
-  console.log("================================");
-
-  // ======================================
-  // REGISTER SLASH COMMAND
-  // ======================================
-
-  try {
-
-    await client.application.commands.set(
-      [
-        roleCommand.toJSON(),
-        ticketCommand.toJSON(),
-
-        catalogCommand.toJSON(),
-        setSlotCommand.toJSON(),
-        addSlotCommand.toJSON(),
-
-        freeRoleCommand.toJSON(),
-
-        youtubeCommand.toJSON(),
-
-        imagineCommand.toJSON(),
-        removeBgCommand.toJSON(),
-
-        ...moderationCommands
-      ],
-      GUILD_ID
+    console.log(
+      "================================"
     );
 
     console.log(
-      "✅ Slash command berhasil didaftarkan."
+      "🤖 Bot login sebagai " +
+        client.user.tag
     );
 
-  } catch (error) {
-
-    console.error(
-      "❌ Gagal mendaftarkan slash command:",
-      error
+    console.log(
+      "================================"
     );
+
+    // ======================================
+    // REGISTER SLASH COMMAND
+    // ======================================
+
+    try {
+
+      await client.application.commands.set(
+        [
+
+          roleCommand.toJSON(),
+
+          ticketCommand.toJSON(),
+
+          catalogCommand.toJSON(),
+
+          setSlotCommand.toJSON(),
+
+          addSlotCommand.toJSON(),
+
+          freeRoleCommand.toJSON(),
+
+          youtubeCommand.toJSON(),
+
+          imagineCommand.toJSON(),
+
+          removeBgCommand.toJSON(),
+
+          ...moderationCommands
+
+        ],
+
+        GUILD_ID
+
+      );
+
+      console.log(
+        "✅ Slash command berhasil didaftarkan."
+      );
+
+    } catch (error) {
+
+      console.error(
+        "❌ Gagal mendaftarkan slash command:",
+        error
+      );
+
+    }
+
+    // ======================================
+    // TICKET PANEL
+    // ======================================
+
+    try {
+
+      await sendTicketPanel(
+        client
+      );
+
+    } catch (error) {
+
+      console.error(
+        "❌ Gagal mengirim Ticket Panel:",
+        error
+      );
+
+    }
 
   }
-
-  // ======================================
-  // TICKET PANEL
-  // ======================================
-
-  try {
-
-    await sendTicketPanel(client);
-
-  } catch (error) {
-
-    console.error(
-      "❌ Gagal mengirim Ticket Panel:",
-      error
-    );
-
-  }
-
-});
+);
 
 // ========================================
 // INTERACTION CREATE
@@ -223,10 +257,38 @@ client.on(
     try {
 
       // ====================================
+      // CATALOG MODAL
+      // CATALOG SELECT MENU
+      // ====================================
+
+      if (
+        interaction.isModalSubmit() ||
+        (
+          interaction.isStringSelectMenu() &&
+          interaction.customId?.startsWith(
+            "catalog_"
+          )
+        )
+      ) {
+
+        const catalogHandled =
+          await handleCatalog(
+            interaction
+          );
+
+        if (catalogHandled) {
+          return;
+        }
+
+      }
+
+      // ====================================
       // YOUTUBE SELECT MENU
       // ====================================
 
-      if (interaction.isStringSelectMenu()) {
+      if (
+        interaction.isStringSelectMenu()
+      ) {
 
         const youtubeFormatHandled =
           await handleYoutubeInteraction(
@@ -245,24 +307,30 @@ client.on(
         if (youtubeQualityHandled) {
           return;
         }
+
       }
 
       // ====================================
       // CATALOG AUTOCOMPLETE
       // ====================================
 
-      if (interaction.isAutocomplete()) {
+      if (
+        interaction.isAutocomplete()
+      ) {
 
         return await handleCatalogAutocomplete(
           interaction
         );
+
       }
 
       // ====================================
       // MODERATION
       // ====================================
 
-      if (interaction.isChatInputCommand()) {
+      if (
+        interaction.isChatInputCommand()
+      ) {
 
         const handled =
           await handleModerationInteraction(
@@ -272,6 +340,7 @@ client.on(
         if (handled) {
           return;
         }
+
       }
 
       // ====================================
@@ -280,12 +349,14 @@ client.on(
 
       if (
         interaction.isChatInputCommand() &&
-        interaction.commandName === "imagine"
+        interaction.commandName ===
+          "imagine"
       ) {
 
         return await handleImagine(
           interaction
         );
+
       }
 
       // ====================================
@@ -294,16 +365,18 @@ client.on(
 
       if (
         interaction.isChatInputCommand() &&
-        interaction.commandName === "removebg"
+        interaction.commandName ===
+          "removebg"
       ) {
 
         return await handleRemoveBg(
           interaction
         );
+
       }
 
       // ====================================
-      // FREE ROLE INTERACTION
+      // FREE ROLE
       // ====================================
 
       if (
@@ -311,7 +384,7 @@ client.on(
           interaction.isButton() ||
           interaction.isStringSelectMenu()
         ) &&
-        interaction.customId.startsWith(
+        interaction.customId?.startsWith(
           "free_role_"
         )
       ) {
@@ -319,6 +392,7 @@ client.on(
         return await handleFreeRoleInteraction(
           interaction
         );
+
       }
 
       // ====================================
@@ -327,21 +401,33 @@ client.on(
 
       if (
         interaction.isButton() &&
-        interaction.customId.startsWith(
+        interaction.customId?.startsWith(
           "catalog_"
         )
       ) {
 
+        const catalogHandled =
+          await handleCatalog(
+            interaction
+          );
+
+        if (catalogHandled) {
+          return;
+        }
+
         return await handleCatalogInteraction(
           interaction
         );
+
       }
 
       // ====================================
       // YOUTUBE SLASH COMMAND
       // ====================================
 
-      if (interaction.isChatInputCommand()) {
+      if (
+        interaction.isChatInputCommand()
+      ) {
 
         const youtubeHandled =
           await handleYoutube(
@@ -364,6 +450,7 @@ client.on(
           return await handleFreeRoleCommand(
             interaction
           );
+
         }
 
         // -------------------------------
@@ -378,6 +465,7 @@ client.on(
           return await handleCatalogCommand(
             interaction
           );
+
         }
 
         // -------------------------------
@@ -392,6 +480,7 @@ client.on(
           return await handleRoleFeature(
             interaction
           );
+
         }
 
         // -------------------------------
@@ -406,6 +495,7 @@ client.on(
           return await handleSetSlot(
             interaction
           );
+
         }
 
         // -------------------------------
@@ -420,6 +510,7 @@ client.on(
           return await handleAddSlot(
             interaction
           );
+
         }
 
       }
@@ -453,8 +544,12 @@ client.on(
       ) {
 
         await interaction.reply({
-          content: "❌ Terjadi kesalahan.",
+
+          content:
+            "❌ Terjadi kesalahan.",
+
           ephemeral: true
+
         }).catch(() => {});
 
       }
@@ -479,28 +574,44 @@ client.on(
     try {
 
       // AUTO RESPONSE
-      await handleAutoResponse(message);
+      await handleAutoResponse(
+        message
+      );
 
       // PINTEREST
-      await handlePinterest(message);
+      await handlePinterest(
+        message
+      );
 
       // MARKET
-      await handleMarket(message);
+      await handleMarket(
+        message
+      );
 
       // CALCULATOR
-      await handleCalculator(message);
+      await handleCalculator(
+        message
+      );
 
       // CURRENCY
-      await handleCurrency(message);
+      await handleCurrency(
+        message
+      );
 
       // CHECK CURRENCY
-      await handleCheckCurrency(message);
+      await handleCheckCurrency(
+        message
+      );
 
       // TEXT TO SPEECH
-      await handleTTSMessage(message);
+      await handleTTSMessage(
+        message
+      );
 
       // SFL AUTO SKIPLINK
-      await handleSFL(message);
+      await handleSFL(
+        message
+      );
 
     } catch (error) {
 
