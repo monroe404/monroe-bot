@@ -21,12 +21,6 @@ const {
 } = require("./features/ticket");
 
 const {
-  catalogCommand,
-  setSlotCommand,
-  addSlotCommand
-} = require("./features/catalog");
-
-const {
   freeRoleCommand
 } = require("./features/freeRole");
 
