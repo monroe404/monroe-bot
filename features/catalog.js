@@ -663,6 +663,8 @@ module.exports = {
 
   handleCatalogCommandInteraction,
 
-  buildCatalog
+  buildCatalog,
+
+  handleCatalog
 
 };
