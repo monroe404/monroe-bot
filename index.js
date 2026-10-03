@@ -19,6 +19,7 @@ const {
 } = require("./features/role");
 
 const {
+  ticketCommand,
   sendTicketPanel,
   handleTicketFeature
 } = require("./features/ticket");
@@ -95,7 +96,7 @@ const {
 } = require("./features/ai-image");
 
 // ========================================
-// REMOVE BAGROUND
+// REMOVE BACKGROUND
 // ========================================
 
 const {
@@ -115,20 +116,16 @@ require("./features/aiBot");
 
 const app = express();
 
-const PORT =
-  process.env.PORT || 3000;
+const PORT = process.env.PORT || 3000;
 
 app.get("/", (req, res) => {
   res.send("Monroe Bot is Online!");
 });
 
 app.listen(PORT, () => {
-
   console.log(
-    "🌐 Web server berjalan di port " +
-      PORT
+    "🌐 Web server berjalan di port " + PORT
   );
-
 });
 
 // ========================================
@@ -136,107 +133,84 @@ app.listen(PORT, () => {
 // ========================================
 
 const client = new Client({
-
   intents: [
-
     GatewayIntentBits.Guilds,
-
     GatewayIntentBits.GuildMembers,
-
     GatewayIntentBits.GuildMessages,
-
     GatewayIntentBits.MessageContent
-
   ]
-
 });
 
 // ========================================
 // READY
 // ========================================
 
-client.once(
-  "ready",
-  async () => {
+client.once("ready", async () => {
 
-    console.log(
-      "================================"
+  console.log("================================");
+  console.log(
+    "🤖 Bot login sebagai " + client.user.tag
+  );
+  console.log("================================");
+
+  // ======================================
+  // REGISTER SLASH COMMAND
+  // ======================================
+
+  try {
+
+    await client.application.commands.set(
+      [
+        roleCommand.toJSON(),
+        ticketCommand.toJSON(),
+
+        catalogCommand.toJSON(),
+        setSlotCommand.toJSON(),
+        addSlotCommand.toJSON(),
+
+        freeRoleCommand.toJSON(),
+
+        youtubeCommand.toJSON(),
+
+        imagineCommand.toJSON(),
+        removeBgCommand.toJSON(),
+
+        ...moderationCommands
+      ],
+      GUILD_ID
     );
 
     console.log(
-      "🤖 Bot login sebagai " +
-        client.user.tag
+      "✅ Slash command berhasil didaftarkan."
     );
 
-    console.log(
-      "================================"
+  } catch (error) {
+
+    console.error(
+      "❌ Gagal mendaftarkan slash command:",
+      error
     );
-
-    // ======================================
-    // REGISTER SLASH COMMAND
-    // ======================================
-
-    try {
-
-      await client.application.commands.set(
-        [
-
-          roleCommand.toJSON(),
-
-          catalogCommand.toJSON(),
-
-          setSlotCommand.toJSON(),
-
-          addSlotCommand.toJSON(),
-
-          freeRoleCommand.toJSON(),
-
-          youtubeCommand.toJSON(),
-
-          imagineCommand.toJSON(),
-
-          removeBgCommand.toJSON(),
-
-          ...moderationCommands
-
-        ],
-        GUILD_ID
-      );
-
-      console.log(
-        "✅ Slash command berhasil didaftarkan."
-      );
-
-    } catch (error) {
-
-      console.error(
-        "❌ Gagal mendaftarkan slash command:",
-        error
-      );
-
-    }
-
-    // ======================================
-    // TICKET PANEL
-    // ======================================
-
-    try {
-
-      await sendTicketPanel(
-        client
-      );
-
-    } catch (error) {
-
-      console.error(
-        "❌ Gagal mengirim Ticket Panel:",
-        error
-      );
-
-    }
 
   }
-);
+
+  // ======================================
+  // TICKET PANEL
+  // ======================================
+
+  try {
+
+    await sendTicketPanel(client);
+
+  } catch (error) {
+
+    console.error(
+      "❌ Gagal mengirim Ticket Panel:",
+      error
+    );
+
+  }
+
+});
 
 // ========================================
 // INTERACTION CREATE
@@ -249,12 +223,10 @@ client.on(
     try {
 
       // ====================================
-      // YOUTUBE INTERACTION
+      // YOUTUBE SELECT MENU
       // ====================================
 
-      if (
-        interaction.isStringSelectMenu()
-      ) {
+      if (interaction.isStringSelectMenu()) {
 
         const youtubeFormatHandled =
           await handleYoutubeInteraction(
@@ -273,30 +245,24 @@ client.on(
         if (youtubeQualityHandled) {
           return;
         }
-
       }
 
       // ====================================
       // CATALOG AUTOCOMPLETE
       // ====================================
 
-      if (
-        interaction.isAutocomplete()
-      ) {
+      if (interaction.isAutocomplete()) {
 
         return await handleCatalogAutocomplete(
           interaction
         );
-
       }
 
       // ====================================
       // MODERATION
       // ====================================
 
-      if (
-        interaction.isChatInputCommand()
-      ) {
+      if (interaction.isChatInputCommand()) {
 
         const handled =
           await handleModerationInteraction(
@@ -306,11 +272,10 @@ client.on(
         if (handled) {
           return;
         }
-
       }
 
       // ====================================
-      // AI IMAGE GENERATOR
+      // AI IMAGE
       // ====================================
 
       if (
@@ -321,22 +286,24 @@ client.on(
         return await handleImagine(
           interaction
         );
-
       }
 
       // ====================================
-      // REMOVE BAGROUND
+      // REMOVE BACKGROUND
       // ====================================
 
       if (
-  interaction.isChatInputCommand() &&
-  interaction.commandName === "removebg"
-) {
-  return await handleRemoveBg(interaction);
+        interaction.isChatInputCommand() &&
+        interaction.commandName === "removebg"
+      ) {
+
+        return await handleRemoveBg(
+          interaction
+        );
       }
 
       // ====================================
-      // FREE ROLE
+      // FREE ROLE INTERACTION
       // ====================================
 
       if (
@@ -352,7 +319,6 @@ client.on(
         return await handleFreeRoleInteraction(
           interaction
         );
-
       }
 
       // ====================================
@@ -369,16 +335,13 @@ client.on(
         return await handleCatalogInteraction(
           interaction
         );
-
       }
 
       // ====================================
       // YOUTUBE SLASH COMMAND
       // ====================================
 
-      if (
-        interaction.isChatInputCommand()
-      ) {
+      if (interaction.isChatInputCommand()) {
 
         const youtubeHandled =
           await handleYoutube(
@@ -401,7 +364,6 @@ client.on(
           return await handleFreeRoleCommand(
             interaction
           );
-
         }
 
         // -------------------------------
@@ -416,7 +378,6 @@ client.on(
           return await handleCatalogCommand(
             interaction
           );
-
         }
 
         // -------------------------------
@@ -431,7 +392,6 @@ client.on(
           return await handleRoleFeature(
             interaction
           );
-
         }
 
         // -------------------------------
@@ -446,7 +406,6 @@ client.on(
           return await handleSetSlot(
             interaction
           );
-
         }
 
         // -------------------------------
@@ -461,7 +420,6 @@ client.on(
           return await handleAddSlot(
             interaction
           );
-
         }
 
       }
@@ -495,12 +453,8 @@ client.on(
       ) {
 
         await interaction.reply({
-
-          content:
-            "❌ Terjadi kesalahan.",
-
+          content: "❌ Terjadi kesalahan.",
           ephemeral: true
-
         }).catch(() => {});
 
       }
@@ -518,80 +472,35 @@ client.on(
   "messageCreate",
   async message => {
 
-    // Jangan proses pesan bot
     if (message.author.bot) {
       return;
     }
 
     try {
 
-      // ==================================
       // AUTO RESPONSE
-      // ==================================
+      await handleAutoResponse(message);
 
-      await handleAutoResponse(
-        message
-      );
-
-      // ==================================
       // PINTEREST
-      // ==================================
+      await handlePinterest(message);
 
-      await handlePinterest(
-        message
-      );
-      
-      // ==================================
       // MARKET
-      // ==================================
+      await handleMarket(message);
 
-      await handleMarket(
-        message
-      );
-
-      // ==================================
       // CALCULATOR
-      // !calc
-      // ==================================
+      await handleCalculator(message);
 
-      await handleCalculator(
-        message
-      );
-
-      // ==================================
       // CURRENCY
-      // !convert
-      // ==================================
+      await handleCurrency(message);
 
-      await handleCurrency(
-        message
-      );
-
-      // ==================================
       // CHECK CURRENCY
-      // !cekuang
-      // ==================================
+      await handleCheckCurrency(message);
 
-      await handleCheckCurrency(
-        message
-      );
-
-      // ==================================
       // TEXT TO SPEECH
-      // !tts
-      // ==================================
+      await handleTTSMessage(message);
 
-      await handleTTSMessage(
-        message
-      );
-
-      // ==================================
       // SFL AUTO SKIPLINK
-      // ==================================
-
-      await handleSFL(
-        message
-      );
+      await handleSFL(message);
 
     } catch (error) {
 
