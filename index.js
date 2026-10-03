@@ -42,18 +42,6 @@ const {
 // ========================================
 
 const {
-  catalogCommand,
-  setSlotCommand,
-  addSlotCommand,
-  handleCatalogCommand,
-  handleCatalogInteraction,
-  handleCatalog,
-  handleSetSlot,
-  handleAddSlot,
-  handleCatalogAutocomplete
-} = require("./features/catalog");
-
-const {
   handleCalculator
 } = require("./features/calculator");
 
@@ -188,8 +176,6 @@ client.once(
           roleCommand.toJSON(),
 
           ticketCommand.toJSON(),
-
-          catalogCommand.toJSON(),
 
           setSlotCommand.toJSON(),
 
