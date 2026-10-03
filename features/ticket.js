@@ -138,6 +138,9 @@ async function sendTicketPanel(client) {
   }
 }
 
+const MONROE_LOGO =
+  "https://cdn.discordapp.com/attachments/1528188606663884853/1555836549474689105/Tak_berjudul41_20260920220611.jpg?backend=b2&ex=6ac1f933&is=6ac0a7b3&hm=248717fd85b4ec8cbba608f95fc6e079bffd0e3a8405ec267f860fe571da253a&"
+
 // LOGO
       .addMediaGalleryComponents(
         gallery =>
@@ -147,8 +150,6 @@ async function sendTicketPanel(client) {
           )
       )
 
-const MONROE_LOGO =
-  "https://cdn.discordapp.com/attachments/1528188606663884853/1555836549474689105/Tak_berjudul41_20260920220611.jpg?backend=b2&ex=6ac1f933&is=6ac0a7b3&hm=248717fd85b4ec8cbba608f95fc6e079bffd0e3a8405ec267f860fe571da253a&"
 // =========================
 
 // =========================
