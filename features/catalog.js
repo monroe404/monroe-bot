@@ -644,27 +644,17 @@ async function handleCatalogAutocomplete(
 // ========================================
 
 module.exports = {
-
   catalogCommand,
-
   setSlotCommand,
-
   addSlotCommand,
 
   handleCatalogCommand,
-
   handleCatalogInteraction,
+  handleCatalog,
 
   handleSetSlot,
-
   handleAddSlot,
-
   handleCatalogAutocomplete,
 
-  handleCatalogCommandInteraction,
-
-  buildCatalog,
-
-  handleCatalog
-
+  buildCatalog
 };
