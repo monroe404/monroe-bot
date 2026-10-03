@@ -37,10 +37,6 @@ const {
   handlePinterest
 } = require("./features/pinterest");
 
-// ========================================
-// CATALOG
-// ========================================
-
 const {
   handleCalculator
 } = require("./features/calculator");
@@ -80,7 +76,7 @@ const {
 } = require("./features/youtube");
 
 // ========================================
-// AI IMAGE GENERATOR
+// AI IMAGE
 // ========================================
 
 const {
@@ -109,18 +105,18 @@ require("./features/aiBot");
 
 const app = express();
 
-const PORT = process.env.PORT || 3000;
+const PORT =
+  process.env.PORT || 3000;
 
 app.get("/", (req, res) => {
   res.send("Monroe Bot is Online!");
 });
 
 app.listen(PORT, () => {
-
   console.log(
-    "🌐 Web server berjalan di port " + PORT
+    "🌐 Web server berjalan di port " +
+    PORT
   );
-
 });
 
 // ========================================
@@ -157,7 +153,7 @@ client.once(
 
     console.log(
       "🤖 Bot login sebagai " +
-        client.user.tag
+      client.user.tag
     );
 
     console.log(
@@ -176,10 +172,6 @@ client.once(
           roleCommand.toJSON(),
 
           ticketCommand.toJSON(),
-
-          setSlotCommand.toJSON(),
-
-          addSlotCommand.toJSON(),
 
           freeRoleCommand.toJSON(),
 
@@ -243,32 +235,6 @@ client.on(
     try {
 
       // ====================================
-      // CATALOG MODAL
-      // CATALOG SELECT MENU
-      // ====================================
-
-      if (
-        interaction.isModalSubmit() ||
-        (
-          interaction.isStringSelectMenu() &&
-          interaction.customId?.startsWith(
-            "catalog_"
-          )
-        )
-      ) {
-
-        const catalogHandled =
-          await handleCatalog(
-            interaction
-          );
-
-        if (catalogHandled) {
-          return;
-        }
-
-      }
-
-      // ====================================
       // YOUTUBE SELECT MENU
       // ====================================
 
@@ -276,37 +242,23 @@ client.on(
         interaction.isStringSelectMenu()
       ) {
 
-        const youtubeFormatHandled =
+        const formatHandled =
           await handleYoutubeInteraction(
             interaction
           );
 
-        if (youtubeFormatHandled) {
+        if (formatHandled) {
           return;
         }
 
-        const youtubeQualityHandled =
+        const qualityHandled =
           await handleYoutubeQuality(
             interaction
           );
 
-        if (youtubeQualityHandled) {
+        if (qualityHandled) {
           return;
         }
-
-      }
-
-      // ====================================
-      // CATALOG AUTOCOMPLETE
-      // ====================================
-
-      if (
-        interaction.isAutocomplete()
-      ) {
-
-        return await handleCatalogAutocomplete(
-          interaction
-        );
 
       }
 
@@ -382,32 +334,6 @@ client.on(
       }
 
       // ====================================
-      // CATALOG BUTTON
-      // ====================================
-
-      if (
-        interaction.isButton() &&
-        interaction.customId?.startsWith(
-          "catalog_"
-        )
-      ) {
-
-        const catalogHandled =
-          await handleCatalog(
-            interaction
-          );
-
-        if (catalogHandled) {
-          return;
-        }
-
-        return await handleCatalogInteraction(
-          interaction
-        );
-
-      }
-
-      // ====================================
       // YOUTUBE SLASH COMMAND
       // ====================================
 
@@ -440,21 +366,6 @@ client.on(
         }
 
         // -------------------------------
-        // SETUP CATALOG
-        // -------------------------------
-
-        if (
-          interaction.commandName ===
-          "setup-catalog"
-        ) {
-
-          return await handleCatalogCommand(
-            interaction
-          );
-
-        }
-
-        // -------------------------------
         // SETUP ROLE
         // -------------------------------
 
@@ -464,36 +375,6 @@ client.on(
         ) {
 
           return await handleRoleFeature(
-            interaction
-          );
-
-        }
-
-        // -------------------------------
-        // SET SLOT
-        // -------------------------------
-
-        if (
-          interaction.commandName ===
-          "setslot"
-        ) {
-
-          return await handleSetSlot(
-            interaction
-          );
-
-        }
-
-        // -------------------------------
-        // ADD SLOT
-        // -------------------------------
-
-        if (
-          interaction.commandName ===
-          "addslot"
-        ) {
-
-          return await handleAddSlot(
             interaction
           );
 
@@ -559,42 +440,34 @@ client.on(
 
     try {
 
-      // AUTO RESPONSE
       await handleAutoResponse(
         message
       );
 
-      // PINTEREST
       await handlePinterest(
         message
       );
 
-      // MARKET
       await handleMarket(
         message
       );
 
-      // CALCULATOR
       await handleCalculator(
         message
       );
 
-      // CURRENCY
       await handleCurrency(
         message
       );
 
-      // CHECK CURRENCY
       await handleCheckCurrency(
         message
       );
 
-      // TEXT TO SPEECH
       await handleTTSMessage(
         message
       );
 
-      // SFL AUTO SKIPLINK
       await handleSFL(
         message
       );
