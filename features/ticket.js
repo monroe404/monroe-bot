@@ -18,8 +18,7 @@ const {
 } = require("../config");
 
 const MONROE_LOGO =
-  "https://cdn.discordapp.com/attachments/1548176163845705781/1551248228689776740/Tak_berjudul41_20260920220611.jpg?ex=6ab147fe&is=6aaff67e&hm=6883cf8f65bbd96d52073b8fcf4553119d9ff40367ff98bfcba7fd6649e7f7eb&";
-
+  "https://cdn.discordapp.com/attachments/1528188606663884853/1555836549474689105/Tak_berjudul41_20260920220611.jpg?backend=b2&ex=6ac1f933&is=6ac0a7b3&hm=248717fd85b4ec8cbba608f95fc6e079bffd0e3a8405ec267f860fe571da253a&"
 // =========================
 // STAFF CHECK
 // =========================
