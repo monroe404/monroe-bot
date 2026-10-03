@@ -46,6 +46,12 @@ const {
   moderationCommands
 } = require("./features/moderation");
 
+const {
+  catalogCommand,
+  setSlotCommand,
+  addSlotCommand
+} = require("./features/catalog");
+
 // ========================================
 // COMMAND LIST
 // ========================================
