@@ -17,8 +17,16 @@ const {
   TICKET_PANEL_CHANNEL_ID
 } = require("../config");
 
+// =====================================================
+// MONROE LOGO
+// =====================================================
+
+const MONROE_LOGO =
+  "https://cdn.discordapp.com/attachments/1528188606663884853/1555836549474689105/Tak_berjudul41_20260920220611.jpg?backend=b2&ex=6ac1f933&is=6ac0a7b3&hm=248717fd85b4ec8cbba608f95fc6e079bffd0e3a8405ec267f860fe571da253a&";
+
+// =====================================================
 // STAFF CHECK
-// =========================
+// =====================================================
 
 function isStaff(member) {
   return (
@@ -27,9 +35,9 @@ function isStaff(member) {
   );
 }
 
-// =========================
+// =====================================================
 // TICKET PANEL
-// =========================
+// =====================================================
 
 async function sendTicketPanel(client) {
   try {
@@ -38,6 +46,10 @@ async function sendTicketPanel(client) {
     );
 
     if (!channel || !channel.isTextBased()) return;
+
+    // =================================================
+    // CHECK EXISTING PANEL
+    // =================================================
 
     const messages = await channel.messages.fetch({
       limit: 50
@@ -51,9 +63,9 @@ async function sendTicketPanel(client) {
 
     if (alreadyExists) return;
 
-    // =========================
+    // =================================================
     // BUTTONS
-    // =========================
+    // =================================================
 
     const orderButton = new ButtonBuilder()
       .setCustomId("ticket_buy")
@@ -80,12 +92,17 @@ async function sendTicketPanel(client) {
         warrantyButton
       );
 
-    // =========================
+    // =================================================
     // MAIN CONTAINER
-    // =========================
+    // TEXT → BANNER → BUTTON
+    // =================================================
 
     const container = new ContainerBuilder()
       .setAccentColor(0xff8c00)
+
+      // -------------------------------------------------
+      // TEXT
+      // -------------------------------------------------
 
       .addTextDisplayComponents(
         text =>
@@ -95,7 +112,7 @@ async function sendTicketPanel(client) {
             "Butuh bantuan atau ingin melakukan pemesanan?\n" +
             "Pilih kategori yang sesuai dengan kebutuhan kamu.\n\n" +
 
-            "**🛒 ORDER**\n" +
+            "**:money2~1: ORDER**\n" +
             "Pembelian produk, jasa, atau layanan Monroe.\n\n" +
 
             "**💬 CONTACT STAFF**\n" +
@@ -106,9 +123,21 @@ async function sendTicketPanel(client) {
           )
       )
 
-      .addSeparatorComponents(
-        separator => separator
+      // -------------------------------------------------
+      // BANNER
+      // -------------------------------------------------
+
+      .addMediaGalleryComponents(
+        gallery =>
+          gallery.addItems(
+            new MediaGalleryItemBuilder()
+              .setURL(MONROE_LOGO)
+          )
       )
+
+      // -------------------------------------------------
+      // FOOTER TEXT
+      // -------------------------------------------------
 
       .addTextDisplayComponents(
         text =>
@@ -119,7 +148,15 @@ async function sendTicketPanel(client) {
           )
       )
 
+      // -------------------------------------------------
+      // BUTTONS
+      // -------------------------------------------------
+
       .addActionRowComponents(buttonRow);
+
+    // =================================================
+    // SEND PANEL
+    // =================================================
 
     await channel.send({
       components: [container],
@@ -138,34 +175,24 @@ async function sendTicketPanel(client) {
   }
 }
 
-const MONROE_LOGO =
-  "https://cdn.discordapp.com/attachments/1528188606663884853/1555836549474689105/Tak_berjudul41_20260920220611.jpg?backend=b2&ex=6ac1f933&is=6ac0a7b3&hm=248717fd85b4ec8cbba608f95fc6e079bffd0e3a8405ec267f860fe571da253a&"
-
-// LOGO
-      .addMediaGalleryComponents(
-        gallery =>
-          gallery.addItems(
-            new MediaGalleryItemBuilder()
-              .setURL(MONROE_LOGO)
-          )
-      )
-
-// =========================
-
-// =========================
+// =====================================================
 // HANDLE TICKET
-// =========================
+// =====================================================
 
 async function handleTicketFeature(interaction) {
   if (!interaction.isButton()) return;
 
-  // =========================
+  // ===================================================
   // ORDER
-  // =========================
+  // ===================================================
 
   if (interaction.customId === "ticket_buy") {
     try {
       const guild = interaction.guild;
+
+      // =================================================
+      // CHECK EXISTING TICKET
+      // =================================================
 
       const existingTicket = guild.channels.cache.find(
         channel =>
@@ -182,9 +209,9 @@ async function handleTicketFeature(interaction) {
         });
       }
 
-      // =========================
-      // CATEGORY
-      // =========================
+      // =================================================
+      // FIND / CREATE CATEGORY
+      // =================================================
 
       let category = guild.channels.cache.find(
         channel =>
@@ -201,28 +228,30 @@ async function handleTicketFeature(interaction) {
         await category.setPosition(0);
       }
 
-      // =========================
+      // =================================================
       // USERNAME
-      // =========================
+      // =================================================
 
       const username = interaction.user.username
         .toLowerCase()
         .replace(/[^a-z0-9-]/g, "")
         .slice(0, 70);
 
-      // =========================
+      // =================================================
       // CREATE TICKET
-      // =========================
+      // =================================================
 
       const ticketChannel =
         await guild.channels.create({
           name: `order-${username}`,
           type: ChannelType.GuildText,
           parent: category.id,
+
           topic:
             `ticket-owner:${interaction.user.id}`,
 
           permissionOverwrites: [
+            // EVERYONE
             {
               id: guild.roles.everyone.id,
               deny: [
@@ -230,6 +259,7 @@ async function handleTicketFeature(interaction) {
               ]
             },
 
+            // CUSTOMER
             {
               id: interaction.user.id,
               allow: [
@@ -239,6 +269,7 @@ async function handleTicketFeature(interaction) {
               ]
             },
 
+            // STAFF
             {
               id: STAFF_ROLE_ID,
               allow: [
@@ -249,6 +280,7 @@ async function handleTicketFeature(interaction) {
               ]
             },
 
+            // FOUNDER
             {
               id: FOUNDER_ROLE_ID,
               allow: [
@@ -259,6 +291,7 @@ async function handleTicketFeature(interaction) {
               ]
             },
 
+            // BOT
             {
               id: interaction.client.user.id,
               allow: [
@@ -272,26 +305,22 @@ async function handleTicketFeature(interaction) {
           ]
         });
 
-      // =========================
-      // TICKET OPEN INFO
-      // =========================
+      // =================================================
+      // TICKET INFORMATION
+      // TEXT → BANNER → BUTTON
+      // =================================================
 
       const ticketInfo = new ContainerBuilder()
         .setAccentColor(0xff8c00)
 
-        // LOGO
-        .addMediaGalleryComponents(
-          gallery =>
-            gallery.addItems(
-              new MediaGalleryItemBuilder()
-                .setURL(MONROE_LOGO)
-            )
-        )
+        // ------------------------------------------------
+        // TEXT
+        // ------------------------------------------------
 
         .addTextDisplayComponents(
           text =>
             text.setContent(
-              "# 🛒 MONROE ORDER\n\n" +
+              "# :money2~1: MONROE ORDER\n\n" +
 
               `Halo ${interaction.user} 👋\n\n` +
 
@@ -306,6 +335,18 @@ async function handleTicketFeature(interaction) {
 
               "-# MONROE COMMUNITY © 2026"
             )
+        )
+
+        // ------------------------------------------------
+        // BANNER
+        // ------------------------------------------------
+
+        .addMediaGalleryComponents(
+          gallery =>
+            gallery.addItems(
+              new MediaGalleryItemBuilder()
+                .setURL(MONROE_LOGO)
+            )
         );
 
       await ticketChannel.send({
@@ -313,9 +354,9 @@ async function handleTicketFeature(interaction) {
         flags: MessageFlags.IsComponentsV2
       });
 
-      // =========================
-      // FORM BIASA
-      // =========================
+      // =================================================
+      // ORDER FORM
+      // =================================================
 
       await ticketChannel.send(
         "📋 **FORM PEMESANAN**\n\n" +
@@ -327,9 +368,9 @@ async function handleTicketFeature(interaction) {
         "Silakan isi semua bagian di atas dengan lengkap."
       );
 
-      // =========================
+      // =================================================
       // CLOSE BUTTON
-      // =========================
+      // =================================================
 
       const closeRow =
         new ActionRowBuilder().addComponents(
@@ -343,6 +384,10 @@ async function handleTicketFeature(interaction) {
       await ticketChannel.send({
         components: [closeRow]
       });
+
+      // =================================================
+      // CONFIRMATION
+      // =================================================
 
       return interaction.reply({
         content:
@@ -366,9 +411,9 @@ async function handleTicketFeature(interaction) {
     }
   }
 
-  // =========================
+  // ===================================================
   // CONTACT STAFF
-  // =========================
+  // ===================================================
 
   if (interaction.customId === "ticket_staff") {
     return interaction.reply({
@@ -378,9 +423,9 @@ async function handleTicketFeature(interaction) {
     });
   }
 
-  // =========================
+  // ===================================================
   // WARRANTY
-  // =========================
+  // ===================================================
 
   if (interaction.customId === "ticket_warranty") {
     return interaction.reply({
@@ -390,13 +435,17 @@ async function handleTicketFeature(interaction) {
     });
   }
 
-  // =========================
+  // ===================================================
   // CLOSE TICKET
-  // =========================
+  // ===================================================
 
   if (interaction.customId === "close_ticket") {
     try {
       const channel = interaction.channel;
+
+      // =================================================
+      // CHECK TICKET
+      // =================================================
 
       if (
         !channel.topic?.startsWith(
@@ -410,10 +459,18 @@ async function handleTicketFeature(interaction) {
         });
       }
 
+      // =================================================
+      // OWNER
+      // =================================================
+
       const ownerId =
         channel.topic.split(":")[1];
 
       const member = interaction.member;
+
+      // =================================================
+      // PERMISSION
+      // =================================================
 
       const allowed =
         interaction.user.id === ownerId ||
@@ -429,6 +486,10 @@ async function handleTicketFeature(interaction) {
           ephemeral: true
         });
       }
+
+      // =================================================
+      // CLOSE
+      // =================================================
 
       await interaction.reply(
         "🔒 Ticket akan ditutup dalam **3 detik**..."
@@ -454,9 +515,9 @@ async function handleTicketFeature(interaction) {
   }
 }
 
-// =========================
+// =====================================================
 // EXPORT
-// =========================
+// =====================================================
 
 module.exports = {
   sendTicketPanel,
