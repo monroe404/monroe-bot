@@ -476,6 +476,28 @@ client.on(
   }
 );
 
+// ====================================
+// CATALOG MAIN HANDLER
+// ====================================
+
+if (
+  interaction.isModalSubmit() ||
+  (
+    (interaction.isButton() ||
+     interaction.isStringSelectMenu()) &&
+    interaction.customId?.startsWith("catalog_")
+  )
+) {
+
+  const handled =
+    await handleCatalog(interaction);
+
+  if (handled) {
+    return;
+  }
+
+}
+
 // ========================================
 // MESSAGE CREATE
 // ========================================
