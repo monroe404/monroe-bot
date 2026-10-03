@@ -56,10 +56,6 @@ const commands = [
 
   ticketCommand.toJSON(),
 
-  catalogCommand.toJSON(),
-  setSlotCommand.toJSON(),
-  addSlotCommand.toJSON(),
-
   freeRoleCommand.toJSON(),
 
   youtubeCommand.toJSON(),
