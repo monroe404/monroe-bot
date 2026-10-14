@@ -105,6 +105,12 @@ require("./features/aiBot");
 
 const app = express();
 
+app.use(express.json({ limit: "16kb" }));
+
+const saNewsApi = require("./features/saNewsApi");
+
+app.use("/api/sanews", saNewsApi);
+
 const PORT =
   process.env.PORT || 3000;
 
