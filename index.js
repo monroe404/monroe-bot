@@ -148,7 +148,7 @@ const client = new Client({
 // MONROE ONTOP
 // ========================================
 
-app.locals.discordClient
+app.locals.discordClient = client;
 
 // ========================================
 // READY
